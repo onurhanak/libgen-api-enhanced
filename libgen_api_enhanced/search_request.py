@@ -16,20 +16,18 @@ class SearchRequest:
 
     col_names = [
         "ID",
-        "Author",
         "Title",
+        "Author",
         "Publisher",
         "Year",
-        "Pages",
         "Language",
+        "Pages",
         "Size",
         "Extension",
         "Mirror_1",
         "Mirror_2",
         "Mirror_3",
         "Mirror_4",
-        "Mirror_5",
-        "Edit",
     ]
 
     def __init__(self, query, search_type="title"):
@@ -48,15 +46,15 @@ class SearchRequest:
         query_parsed = "%20".join(self.query.split(" "))
         if self.search_type.lower() == "title":
             search_url = (
-                f"https://libgen.is/search.php?req={query_parsed}&column=title&res=100"
+                f"https://libgen.li/index.php?req={query_parsed}&columns%5B%5D=t&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
             )
         elif self.search_type.lower() == "author":
             search_url = (
-                f"https://libgen.is/search.php?req={query_parsed}&column=author&res=100"
+                f"https://libgen.li/index.php?req={query_parsed}&columns%5B%5D=a&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
             )
         elif self.search_type.lower() == "default":
-            search_url = (
-                f"https://libgen.is/search.php?req={query_parsed}&column=default&res=100"
+            sesarch_url = (
+                f"https://libgen.li/index.php?req={query_parsed}&columns%5B%5D=t&columns%5B%5D=a&columns%5B%5D=s&columns%5B%5D=y&columns%5B%5D=p&columns%5B%5D=i&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
             )
         search_page = requests.get(search_url)
         return search_page
@@ -77,10 +75,10 @@ class SearchRequest:
 
         ids = ','.join([book['ID'] for book in output_data])
 
-        url = f"https://libgen.is/json.php?ids={ids}&fields=id,md5,openlibraryid"
+        url = f"https://libgen.li/json.php?ids={ids}&fields=id,md5,openlibraryid"
 
         response = json.loads(requests.get(url).text)
-
+        print(response.text)
         # match openlibraryid to id
         for book in output_data:
             for book_json in response:
@@ -96,27 +94,31 @@ class SearchRequest:
 
         # Libgen results contain 3 tables
         # Table2: Table of data to scrape.
-        information_table = soup.find_all("table")[2]
-
+        information_table = soup.find_all("table")[1]
         # Determines whether the link url (for the mirror)
         # or link text (for the title) should be preserved.
         # Both the book title and mirror links have a "title" attribute,
         # but only the mirror links have it filled.(title vs title="libgen.io")
+
         raw_data = [
             [
-                td.a["href"]
-                if td.find("a")
-                and td.find("a").has_attr("title")
-                and td.find("a")["title"] != ""
-                else "".join(td.stripped_strings)
-                for td in row.find_all("td")
+                values[0].find("a", href=True)['href'].split("id=")[-1],
+                values[0].text,
+                values[1].text,
+                values[2].text,
+                values[3].text,
+                values[4].text,
+                values[6].text,
+                values[7].text,
+                *[
+                    a['href'] if a['href'][0] != "/" else f"https://libgen.li{a['href']}"
+                    for a in values[8].find_all("a", href=True)
+                ]
             ]
-            for row in information_table.find_all("tr")[
-                1:
-            ]  # Skip row 0 as it is the headings row
+            for row in information_table.find_all("tr")[1:]
+            if (values := row.find_all("td"))
         ]
-
         output_data = [dict(zip(self.col_names, row)) for row in raw_data]
-        output_data = self.add_direct_download_links(output_data)
-        output_data = self.add_book_cover_links(output_data)
-        return output_data
+        #output_data = self.add_direct_download_links(output_data)
+        #output_data = self.add_book_cover_links(output_data)
+        return output_data[0]
