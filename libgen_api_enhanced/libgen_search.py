@@ -6,42 +6,108 @@ MIRROR_SOURCES = ["GET", "Cloudflare", "IPFS.io", "Infura"]
 
 
 class LibgenSearch:
+    def __init__(self, mirror="is"):
+        if mirror == "is":
+            self.alt = False
+            self.mirror = "https://libgen.is/"
+        elif mirror in ["gs", "bz", "la", "gl"]:
+            self.alt = True
+            self.mirror = f"https://libgen.{mirror}/"
+
     def search_default(self, query):
-        search_request = SearchRequest(query, search_type="default")
-        return search_request.aggregate_request_data()
-    
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="default", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_alt()
+        else:
+            search_request = SearchRequest(
+                query, search_type="default", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_original()
+
     def search_default_filtered(self, query, filters, exact_match=False):
-        search_request = SearchRequest(query, search_type="default")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
-            results=results, filters=filters, exact_match=exact_match
-        )
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="default", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_alt()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
+        else:
+            search_request = SearchRequest(
+                query, search_type="default", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_original()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
         return filtered_results
-    
+
     def search_title(self, query):
-        search_request = SearchRequest(query, search_type="title")
-        return search_request.aggregate_request_data()
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="title", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_alt()
+        else:
+            search_request = SearchRequest(
+                query, search_type="title", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_original()
 
     def search_author(self, query):
-        search_request = SearchRequest(query, search_type="author")
-        return search_request.aggregate_request_data()
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="author", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_alt()
+        else:
+            search_request = SearchRequest(
+                query, search_type="author", mirror=self.mirror
+            )
+            return search_request.aggregate_request_data_libgen_original()
 
     def search_title_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="title")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
-            results=results, filters=filters, exact_match=exact_match
-        )
-        return filtered_results
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="title", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_alt()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
+            return filtered_results
+        else:
+            search_request = SearchRequest(
+                query, search_type="title", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_original()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
+            return filtered_results
 
     def search_author_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="author")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
-            results=results, filters=filters, exact_match=exact_match
-        )
-        return filtered_results
-
+        if self.alt:
+            search_request = SearchRequest(
+                query, search_type="author", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_alt()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
+            return filtered_results
+        else:
+            search_request = SearchRequest(
+                query, search_type="author", mirror=self.mirror
+            )
+            results = search_request.aggregate_request_data_libgen_original()
+            filtered_results = filter_results(
+                results=results, filters=filters, exact_match=exact_match
+            )
+            return filtered_results
 
 
 def filter_results(results, filters, exact_match):
