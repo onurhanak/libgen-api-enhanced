@@ -46,7 +46,6 @@ class SearchRequest:
 
     def get_search_page(self):
         query_parsed = "%20".join(self.query.split(" "))
-<<<<<<< HEAD
         if self.search_type.lower() == "title":
             search_url = (
                 f"https://libgen.li/index.php?req={query_parsed}&columns%5B%5D=t&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
@@ -59,7 +58,6 @@ class SearchRequest:
             sesarch_url = (
                 f"https://libgen.li/index.php?req={query_parsed}&columns%5B%5D=t&columns%5B%5D=a&columns%5B%5D=s&columns%5B%5D=y&columns%5B%5D=p&columns%5B%5D=i&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
             )
-=======
         if self.mirror == "https://libgen.is/":
             if self.search_type.lower() == "title":
                 search_url = f"https://libgen.is/search.php?req={query_parsed}&column=title&res=100"
@@ -79,7 +77,6 @@ class SearchRequest:
             elif self.search_type.lower() == "default":
                 search_url = f"{self.mirror}index.php?req={query_parsed})&res=100"
 
->>>>>>> 024057b (working on alternative mirror support)
         search_page = requests.get(search_url)
         return search_page
 
@@ -248,4 +245,3 @@ class SearchRequest:
         output_data = self.add_direct_download_links(output_data)
         # output_data = self.add_book_cover_links(output_data)
         return output_data
->>>>>>> 024057b (working on alternative mirror support)
