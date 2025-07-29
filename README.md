@@ -1,3 +1,5 @@
+This library no longer works due to original LibGen mirrors going down. I am working a solution that uses the alternative mirrors while preserving existing functionality. Contributions are welcome.
+
 <h1>LibgenAPI Enhanced</h1>
 
 Search Library Genesis programmatically using an enhanced Python library. This fork extends the original `libgen-api` by [Harrison Broadbent](https://github.com/harrison-broadbent/libgen-api) with added features like direct download links and book cover links. It also returns 100 results by default, instead of 25.
