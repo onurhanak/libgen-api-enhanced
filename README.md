@@ -1,4 +1,7 @@
-This library no longer works due to original LibGen mirrors going down. I am working a solution that uses the alternative mirrors while preserving existing functionality. Contributions are welcome.
+<h3>This library no longer works due to original LibGen mirrors going down. I am working a solution that uses the alternative mirrors while preserving existing functionality. Contributions are welcome. </h3>
+
+
+
 
 <h1>LibgenAPI Enhanced</h1>
 
