@@ -1,126 +1,77 @@
 from .search_request import SearchRequest
 import requests
 from bs4 import BeautifulSoup
-
-MIRROR_SOURCES = ["GET", "Cloudflare", "IPFS.io", "Infura"]
+from urllib.parse import urlparse, urljoin, parse_qs
 
 
 class LibgenSearch:
     def __init__(self, mirror="is"):
-        if mirror == "is":
-            self.alt = False
-            self.mirror = "https://libgen.is/"
-        elif mirror in ["gs", "bz", "la", "gl"]:
-            self.alt = True
-            self.mirror = f"https://libgen.{mirror}/"
+        self.mirror = f"https://libgen.{mirror}/"
 
     def search_default(self, query):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="default", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_alt()
-        else:
-            search_request = SearchRequest(
-                query, search_type="default", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_original()
+        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
 
     def search_default_filtered(self, query, filters, exact_match=False):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="default", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_alt()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
-        else:
-            search_request = SearchRequest(
-                query, search_type="default", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_original()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
+        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_results(
+            results=results, filters=filters, exact_match=exact_match
+        )
         return filtered_results
 
     def search_title(self, query):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="title", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_alt()
-        else:
-            search_request = SearchRequest(
-                query, search_type="title", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_original()
+        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
 
     def search_author(self, query):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="author", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_alt()
-        else:
-            search_request = SearchRequest(
-                query, search_type="author", mirror=self.mirror
-            )
-            return search_request.aggregate_request_data_libgen_original()
+        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
 
     def search_title_filtered(self, query, filters, exact_match=True):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="title", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_alt()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
-            return filtered_results
-        else:
-            search_request = SearchRequest(
-                query, search_type="title", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_original()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
-            return filtered_results
+        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_results(
+            results=results, filters=filters, exact_match=exact_match
+        )
+        return filtered_results
 
     def search_author_filtered(self, query, filters, exact_match=True):
-        if self.alt:
-            search_request = SearchRequest(
-                query, search_type="author", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_alt()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
-            return filtered_results
-        else:
-            search_request = SearchRequest(
-                query, search_type="author", mirror=self.mirror
-            )
-            results = search_request.aggregate_request_data_libgen_original()
-            filtered_results = filter_results(
-                results=results, filters=filters, exact_match=exact_match
-            )
-            return filtered_results
+        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_results(
+            results=results, filters=filters, exact_match=exact_match
+        )
+        return filtered_results
 
-    def resolve_download_links(self, item):
-        mirror_1 = item["Mirror_1"]
-        page = requests.get(mirror_1)
-        soup = BeautifulSoup(page.text, "html.parser")
-        links = soup.find_all("a", string=MIRROR_SOURCES)
-        download_links = {link.string: f"{self.mirror}{link['href']}" for link in links}
-        download_links = [f"{self.mirror}{link['href']}" for link in links]
-        md5 = item["Mirror_1"].split("md5=")[-1].split("&")[0]
-        key = download_links[0].split("key=")[-1]
-        download_link = f"https://cdn4.booksdl.lc/get.php?md5={md5}&key={key}"
+    def resolve_direct_download_link(self, item):
+        if "Mirror_1" not in item or "MD5" not in item:
+            raise KeyError("item must include 'Mirror_1' and 'md5'")
 
-        return download_link
+        mirror_url = item["Mirror_1"]
+        md5 = item["MD5"]
+
+        resp = requests.get(mirror_url)
+        resp.raise_for_status()
+        soup = BeautifulSoup(resp.text, "html.parser")
+
+        a = soup.find_all("a", string=lambda s: s and s.strip().upper() == "GET")
+        if not a:
+            raise ValueError("No GET links found on the mirror page")
+
+        for link in a:
+            href = link.get("href")
+            if not href:
+                continue
+            full_url = urljoin(mirror_url, href)
+            params = parse_qs(urlparse(full_url).query)
+            key_vals = params.get("key")
+            if key_vals and key_vals[0]:
+                key = key_vals[0]
+                cdn_base = getattr(self, "cdn_base", "https://cdn4.booksdl.lc/get.php")
+                return f"{cdn_base}?md5={md5}&key={key}"
+
+        raise ValueError("Could not extract 'key' parameter from any GET link")
 
 
 def filter_results(results, filters, exact_match):
