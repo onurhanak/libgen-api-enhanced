@@ -77,11 +77,11 @@ class SearchRequest:
     def add_direct_download_links(self, output_data):
         # Add a direct download link to each result
         for book in output_data:
-            md5 = book["Mirror_1"].split("/")[-1].lower()
+            md5 = book["Mirror_1"].split("md5=")[-1].split("&")[0]
             title = urllib.parse.quote(book["Title"])
             extension = book["Extension"]
             book["Direct_Download_Tor_Link"] = (
-                f"http://libgenfrialc7tguyjywa36vtrdcplwpxaw43h6o63dmmwhvavo5rqqd.onion/LG/01311000/2d6d1cf09a327162d4230afde4413a39/{title}.{extension}"
+                f"http://libgenfrialc7tguyjywa36vtrdcplwpxaw43h6o63dmmwhvavo5rqqd.onion/LG/01311000/{md5}/{title}.{extension}"
             )
 
         return output_data
@@ -135,7 +135,7 @@ class SearchRequest:
         ]
         output_data = [dict(zip(self.col_names, row)) for row in raw_data]
         output_data = self.add_direct_download_links(output_data)
-        output_data = self.add_book_cover_links(output_data)
+        # output_data = self.add_book_cover_links(output_data)
         return output_data[0]
 
     def aggregate_request_data_libgen_alt(self):
@@ -187,7 +187,7 @@ class SearchRequest:
                 mirrors = [
                     (
                         a["href"].strip()
-                        if not a["href"].startswith("/")
+                        if "http" in a["href"]
                         else f"{self.mirror}{a['href']}"
                     )
                     for a in mirror_links[:4]
@@ -195,8 +195,6 @@ class SearchRequest:
 
                 while len(mirrors) < 4:
                     mirrors.append("")
-
-                md5 = mirrors[0].split("/")[-1]
 
                 all_rows.append(
                     [
@@ -209,12 +207,12 @@ class SearchRequest:
                         pages,
                         size,
                         extension,
-                        md5,
                         *mirrors,
                     ]
                 )
 
-            except Exception:
+            except Exception as e:
+                print(e)
                 continue
 
         output_data = [dict(zip(self.col_names, row)) for row in all_rows]

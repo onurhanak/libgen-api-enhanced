@@ -109,6 +109,19 @@ class LibgenSearch:
             )
             return filtered_results
 
+    def resolve_download_links(self, item):
+        mirror_1 = item["Mirror_1"]
+        page = requests.get(mirror_1)
+        soup = BeautifulSoup(page.text, "html.parser")
+        links = soup.find_all("a", string=MIRROR_SOURCES)
+        download_links = {link.string: f"{self.mirror}{link['href']}" for link in links}
+        download_links = [f"{self.mirror}{link['href']}" for link in links]
+        md5 = item["Mirror_1"].split("md5=")[-1].split("&")[0]
+        key = download_links[0].split("key=")[-1]
+        download_link = f"https://cdn4.booksdl.lc/get.php?md5={md5}&key={key}"
+
+        return download_link
+
 
 def filter_results(results, filters, exact_match):
     """
