@@ -128,7 +128,7 @@ print(book.resolved_download_link)
 
 Results are returned as a list of Book objects:
 
-```json
+```
 [
     Book(
         id="123456",
