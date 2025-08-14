@@ -1,6 +1,9 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin, parse_qs, quote
+from urllib.parse import urlparse, urljoin, parse_qs
+import re
+from .book import Book
+
 # WHY
 # The SearchRequest module contains all the internal logic for the library.
 #
@@ -37,6 +40,9 @@ class SearchRequest:
         if len(self.query) < 3:
             raise Exception("Query is too short")
 
+        if search_type not in ["title", "author", "default"]:
+            raise Exception('Search type must be one of ["title", "author", "default"]')
+
     def strip_i_tag_from_soup(self, soup):
         subheadings = soup.find_all("i")
         for subheading in subheadings:
@@ -51,94 +57,12 @@ class SearchRequest:
         elif self.search_type.lower() == "default":
             search_url = f"{self.mirror}/index.php?req={query_parsed}&columns%5B%5D=t&columns%5B%5D=a&columns%5B%5D=s&columns%5B%5D=y&columns%5B%5D=p&columns%5B%5D=i&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
 
-        # if self.mirror == "https://libgen.is/":
-        #     if self.search_type.lower() == "title":
-        #         search_url = f"https://libgen.is/search.php?req={query_parsed}&column=title&res=100"
-        #     elif self.search_type.lower() == "author":
-        #         search_url = f"https://libgen.is/search.php?req={query_parsed}&column=author&res=100"
-        #     elif self.search_type.lower() == "default":
-        #         search_url = f"https://libgen.is/search.php?req={query_parsed}&column=default&res=100"
-        # else:
-        #     if self.search_type.lower() == "title":
-        #         search_url = (
-        #             f"{self.mirror}index.php?req={query_parsed})&columns[]=t&res=100"
-        #         )
-        #     elif self.search_type.lower() == "author":
-        #         search_url = (
-        #             f"{self.mirror}index.php?req={query_parsed})&columns[]=a&res=100"
-        #         )
-        #     elif self.search_type.lower() == "default":
-        #         search_url = f"{self.mirror}index.php?req={query_parsed})&res=100"
-
         if search_url:
             search_page = requests.get(search_url)
             return search_page
 
         return None
 
-    def add_direct_download_links(self, output_data):
-        # Add a direct download link to each result
-        for book in output_data:
-            md5 = book["MD5"]
-            title = quote(book["Title"])
-            extension = book["Extension"]
-            book["Direct_Download_Tor_Link"] = (
-                f"http://libgenfrialc7tguyjywa36vtrdcplwpxaw43h6o63dmmwhvavo5rqqd.onion/LG/01311000/{md5}/{title}.{extension}"
-            )
-
-        return output_data
-
-    # def add_book_cover_links(self, output_data):
-    #     ids = ",".join([book["ID"] for book in output_data])
-    #
-    #     url = f"https://libgen.bz/json.php?ids={ids}&fields=id,md5,openlibraryid"
-    #     print(url)
-    #
-    #     response = json.loads(requests.get(url).text)
-    #
-    #     # match openlibraryid to id
-    #     for book in output_data:
-    #         for book_json in response:
-    #             if book["ID"] == book_json["id"]:
-    #                 book["Cover"] = (
-    #                     f"https://covers.openlibrary.org/b/olid/{book_json['openlibraryid']}-M.jpg"
-    #                 )
-    #
-    #     return output_data
-
-    # def aggregate_request_data_libgen_original(self):
-    #     search_page = self.get_search_page()
-    #     soup = BeautifulSoup(search_page.text, "html.parser")
-    #     self.strip_i_tag_from_soup(soup)
-    #
-    #     information_table = soup.find_all("table")[1]
-    #
-    #     raw_data = [
-    #         [
-    #             values[0].find("a", href=True)["href"].split("id=")[-1],
-    #             values[0].text,
-    #             values[1].text,
-    #             values[2].text,
-    #             values[3].text,
-    #             values[4].text,
-    #             values[6].text,
-    #             values[7].text,
-    #             *[
-    #                 (
-    #                     a["href"]
-    #                     if a["href"][0] != "/"
-    #                     else f"https://libgen.li{a['href']}"
-    #                 )
-    #                 for a in values[8].find_all("a", href=True)
-    #             ],
-    #         ]
-    #         for row in information_table.find_all("tr")[1:]
-    #         if (values := row.find_all("td"))
-    #     ]
-    #     output_data = [dict(zip(self.col_names, row)) for row in raw_data]
-    #     output_data = self.add_direct_download_links(output_data)
-    #     # output_data = self.add_book_cover_links(output_data)
-    #     return output_data[0]
     def aggregate_request_data_libgen(self):
         search_page = self.get_search_page()
         soup = BeautifulSoup(search_page.text, "html.parser")
@@ -148,7 +72,7 @@ class SearchRequest:
         if table is None:
             return []
 
-        rows_out = []
+        results = []
 
         for row in table.find_all("tr"):
             tds = row.find_all("td")
@@ -163,6 +87,7 @@ class SearchRequest:
                     if len(title_links) >= 3
                     else title_links[0].text.strip()
                 )
+                title = re.sub(r"[^A-Za-z0-9 ]+", "", title)
                 first_href = title_links[0]["href"] if title_links else ""
                 id_param = parse_qs(urlparse(first_href).query).get("id", [""])[0]
 
@@ -192,32 +117,30 @@ class SearchRequest:
                 while len(mirrors) < 4:
                     mirrors.append("")
 
-                md5 = ""
                 if mirrors[0]:
                     q = parse_qs(urlparse(mirrors[0]).query)
                     md5 = (q.get("md5") or [""])[0]
 
-                rows_out.append(
-                    [
-                        id_param,
-                        title,
-                        author,
-                        publisher,
-                        year,
-                        language,
-                        pages,
-                        size,
-                        extension,
-                        md5,
-                        *mirrors[:4],
-                    ]
+                book = Book(
+                    id_param,
+                    title,
+                    author,
+                    publisher,
+                    year,
+                    language,
+                    pages,
+                    size,
+                    extension,
+                    md5,
+                    mirrors[:4],
                 )
+
+                book.add_tor_download_link()
+
+                results.append(book)
 
             except Exception as e:
                 print(e)
                 continue
 
-        output_data = [dict(zip(self.col_names, row)) for row in rows_out]
-        output_data = self.add_direct_download_links(output_data)
-        # output_data = self.add_book_cover_links(output_data)
-        return output_data
+        return results
