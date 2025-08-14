@@ -22,4 +22,5 @@ setuptools.setup(
     ],
     keywords=["libgen search", "libgen api", "search libgen", "search library genesis"],
     install_requires=["bs4", "requests"],
+    python_requires=">=3.10",
 )

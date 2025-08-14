@@ -30,7 +30,6 @@ def make_table_html(row_html: str) -> str:
 
 
 def minimal_row_html():
-    # columns: Title, Author, Publisher, Year, Language, Pages, Size, Ext, Mirrors
     return """
       <td>
         <a href="/index.php?id=123&foo=bar">Some Title</a>
@@ -94,9 +93,7 @@ def test_parses_one_row(monkeypatch):
     assert b.size == "10 MB"
     assert b.extension == "pdf"
     assert b.md5 == "ABCDEF1234"
-    assert b.mirrors[0].startswith(
-        "https://example.org/"
-    )  # relative link made absolute
+    assert b.mirrors[0].startswith("https://example.org/")
 
 
 def test_skips_rows_with_too_few_columns(monkeypatch):
@@ -155,7 +152,6 @@ def test_resolve_direct_download_link_happy_path(monkeypatch):
     """
 
     def fake_get(url, *args, **kwargs):
-        # Return HTML for the mirror page
         return FakeResponse(mirror_html)
 
     monkeypatch.setattr("requests.get", fake_get)
@@ -179,7 +175,7 @@ def test_resolve_direct_download_link_happy_path(monkeypatch):
     parsed = urlparse(b.resolved_download_link)
     params = parse_qs(parsed.query)
     assert "key" in params
-    assert "md5" in params or "md5" not in params  # allow both patterns
+    assert "md5" in params or "md5" not in params
 
 
 def test_resolve_direct_download_link_no_get_links(monkeypatch):
@@ -208,7 +204,6 @@ def test_resolve_direct_download_link_no_get_links(monkeypatch):
 
 
 def make_book(**kw):
-    # Fill required fields your Book expects
     defaults = dict(
         id="1",
         title="Learning Python",
@@ -287,7 +282,6 @@ def test_exact_match_requires_all_pairs():
 
 
 def test_exact_match_non_string_field_with_equality():
-    # If your Book.year is str, this still passes due to string equality
     out = filter_books(BOOKS, {"year": "2017"}, exact_match=True)
     assert [b.id for b in out] == ["3"]
 
@@ -322,7 +316,7 @@ def test_unknown_field_raises_keyerror():
 
 
 def test_handles_none_values_safely_in_non_exact():
-    b = make_book(id="4", title=None)  # simulate missing title
+    b = make_book(id="4", title=None)
     out = filter_books([b], {"title": "py"}, exact_match=False)
     assert out == []
 
