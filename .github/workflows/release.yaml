@@ -61,7 +61,6 @@ jobs:
 
 
       - name: Publish to PyPI with API token
-        if: ${{ secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@v1.12.4
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
