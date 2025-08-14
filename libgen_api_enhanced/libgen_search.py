@@ -1,5 +1,4 @@
 from .search_request import SearchRequest
-from .book import Book
 
 
 class LibgenSearch:
@@ -50,7 +49,7 @@ def _norm_str(x):
 
 
 def filter_books(results, filters, exact_match):
-    out: list[Book] = []
+    out = []
 
     if not filters:
         return list(results)

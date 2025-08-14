@@ -32,8 +32,7 @@ Use the default search or search by title or author:
 
 from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
-results = s.search_default("Pride and Prejudice")
-print(results)
+results = s.search_default("Pride and Prejudice") # a list of Book objects
 ```
 
 ### Title:
@@ -43,8 +42,7 @@ print(results)
 
 from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
-results = s.search_title("Pride and Prejudice")
-print(results)
+results = s.search_title("Pride and Prejudice") # a list of Book objects
 ```
 
 ### Author:
@@ -54,8 +52,7 @@ print(results)
 
 from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
-results = s.search_author("Jane Austen")
-print(results)
+results = s.search_author("Jane Austen") # a list of Book objects
 ```
 
 Check out the [results layout](#results-layout) to see available fields and how the results data is formatted.
@@ -74,9 +71,8 @@ Check out the [results layout](#results-layout) to see available fields and how 
 from libgen_api_enhanced import LibgenSearch
 
 tf = LibgenSearch()
-title_filters = {"Year": "2007", "Extension": "epub"}
-titles = tf.search_title_filtered("Pride and Prejudice", title_filters, exact_match=True)
-print(titles)
+title_filters = {"year": "2007", "extension": "epub"}
+titles = tf.search_title_filtered("Pride and Prejudice", title_filters, exact_match=True) # a list of Book objects
 ```
 
 ### Filtered Author Searching
@@ -87,9 +83,8 @@ print(titles)
 from libgen_api_enhanced import LibgenSearch
 
 af = LibgenSearch()
-author_filters = {"Language": "German", "Year": "2009"}
-titles = af.search_author_filtered("Agatha Christie", author_filters, exact_match=True)
-print(titles)
+author_filters = {"language": "German", "year": "2009"}
+titles = af.search_author_filtered("Agatha Christie", author_filters, exact_match=True) # a list of Book objects
 ```
 
 ### Non-exact Filtered Searching
@@ -100,36 +95,62 @@ print(titles)
 from libgen_api_enhanced import LibgenSearch
 
 ne_af = LibgenSearch()
-partial_filters = {"Year": "200"}
-titles = ne_af.search_author_filtered("Agatha Christie", partial_filters, exact_match=False)
-print(titles)
+partial_filters = {"year": "200"}
+titles = ne_af.search_author_filtered("Agatha Christie", partial_filters, exact_match=False) # a list of Book objects
 
+```
+## Getting Direct Download Links
+
+The previous books.ms source is no longer available, so this package now provides two options:
+
+- tor_download_link — a prebuilt direct link to the LibGen onion mirror.
+- resolved_download_link — a direct HTTP link resolved at runtime from one of the available mirrors.
+
+Example:
+
+```python
+from libgen_api_enhanced import LibgenSearch
+
+s = LibgenSearch()
+results = s.search_default("Pride and Prejudice")  # returns a list of Book objects
+
+book = results[0]
+
+# Option 1: Use the prebuilt onion mirror link
+print(book.tor_download_link)
+
+# Option 2: Resolve an HTTP direct download link from a mirror
+book.resolve_direct_download_link()
+print(book.resolved_download_link)
 ```
 
 ## Results Layout
 
-Results are returned as a list of dictionaries:
+Results are returned as a list of Book objects:
 
 ```json
 [
-  {
-    "ID": "123456",
-    "Author": "John Smith",
-    "Title": "Title",
-    "Publisher": "Publisher",
-    "Year": "2021"
-    "Pages": "410",
-    "Language": "German",
-    "Size": "1005 Kb",
-    "Extension": "epub",
-    "Mirror_1": "http://example.com",
-    "Mirror_2": "http://example.com",
-    "Mirror_3": "http://example.com",
-    "Mirror_4": "http://example.com",
-    "Mirror_5": "http://example.com",
-    "Direct_Download_Link": "http://example.com",
-    "Cover": "https://covers.openlibrary.org/b/olid/OL1234-M.jpg"
-  }]
+    Book(
+        id="123456",
+        title="Title",
+        author="John Smith",
+        publisher="Publisher",
+        year="2021",
+        language="German",
+        pages="410",
+        size="1005 Kb",
+        extension="epub",
+        md5="ABCDEF1234567890",
+        mirrors=[
+            "http://example.com/mirror1",
+            "http://example.com/mirror2",
+            "http://example.com/mirror3",
+            "http://example.com/mirror4"
+        ],
+        tor_download_link="http://example.com/tor",
+        resolved_download_link="http://example.com/direct"
+    )
+]
 ```
 
 ## Contributors
