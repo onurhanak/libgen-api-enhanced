@@ -3,6 +3,12 @@ name: Release on main
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
+      inputs:
+        version:
+          description: "Version number to release"
+          required: true
+          default: "1.0.6"
 
 permissions:
   contents: write
@@ -53,14 +59,9 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish to PyPI via OIDC
-        if: ${{ !secrets.PYPI_API_TOKEN }}
-        uses: pypa/gh-action-pypi-publish@v1.10.3
-        with:
-          skip-existing: true
 
       - name: Publish to PyPI with API token
-        if: ${{ secrets.PYPI_API_TOKEN }}
+        if: ${{ secrets.PYPI_API_TOKEN != '' }}
         uses: pypa/gh-action-pypi-publish@v1.10.3
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
