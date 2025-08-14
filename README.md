@@ -23,6 +23,9 @@ pip install libgen-api-enhanced
 
 
 ## Basic Searching:
+
+**The library by default uses the .li mirror. You can pass any mirror extension you like such as: .bz, .gs etc.**
+
 Use the default search or search by title or author:
 
 ### Default:

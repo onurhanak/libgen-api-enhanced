@@ -2,7 +2,7 @@ from .search_request import SearchRequest
 
 
 class LibgenSearch:
-    def __init__(self, mirror="is"):
+    def __init__(self, mirror="li"):
         self.mirror = f"https://libgen.{mirror}/"
 
     def search_default(self, query):
