@@ -6,7 +6,7 @@ with open("README.md", "r", errors="replace") as fh:
 setuptools.setup(
     name="libgen_api_enhanced",
     packages=["libgen_api_enhanced"],
-    version="1.0.5",
+    version="1.1.0",
     description="Search Library genesis by Title or Author",
     long_description_content_type="text/markdown",
     long_description=long_description,
@@ -22,4 +22,5 @@ setuptools.setup(
     ],
     keywords=["libgen search", "libgen api", "search libgen", "search library genesis"],
     install_requires=["bs4", "requests"],
+    python_requires=">=3.10",
 )

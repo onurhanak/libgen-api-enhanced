@@ -1,78 +1,81 @@
 from .search_request import SearchRequest
-import requests
-from bs4 import BeautifulSoup
-
-MIRROR_SOURCES = ["GET", "Cloudflare", "IPFS.io", "Infura"]
 
 
 class LibgenSearch:
+    def __init__(self, mirror="is"):
+        self.mirror = f"https://libgen.{mirror}/"
+
     def search_default(self, query):
-        search_request = SearchRequest(query, search_type="default")
-        return search_request.aggregate_request_data()
-    
+        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
+
     def search_default_filtered(self, query, filters, exact_match=False):
-        search_request = SearchRequest(query, search_type="default")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
+        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match
         )
         return filtered_results
-    
+
     def search_title(self, query):
-        search_request = SearchRequest(query, search_type="title")
-        return search_request.aggregate_request_data()
+        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
 
     def search_author(self, query):
-        search_request = SearchRequest(query, search_type="author")
-        return search_request.aggregate_request_data()
+        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+        return search_request.aggregate_request_data_libgen()
 
     def search_title_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="title")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
+        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match
         )
         return filtered_results
 
     def search_author_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="author")
-        results = search_request.aggregate_request_data()
-        filtered_results = filter_results(
+        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+        results = search_request.aggregate_request_data_libgen()
+        filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match
         )
         return filtered_results
 
 
+def _norm_str(x):
+    if x is None:
+        return ""
+    return str(x).casefold()
 
-def filter_results(results, filters, exact_match):
-    """
-    Returns a list of results that match the given filter criteria.
-    When exact_match = true, we only include results that exactly match
-    the filters (ie. the filters are an exact subset of the result).
 
-    When exact-match = false,
-    we run a case-insensitive check between each filter field and each result.
+def filter_books(results, filters, exact_match):
+    out = []
 
-    exact_match defaults to TRUE -
-    this is to maintain consistency with older versions of this library.
-    """
+    if not filters:
+        return list(results)
 
-    filtered_list = []
-    if exact_match:
-        for result in results:
-            # check whether a candidate result matches the given filters
-            if filters.items() <= result.items():
-                filtered_list.append(result)
+    for book in results:
+        ok = True
+        for field, want in filters.items():
+            if not hasattr(book, field):
+                raise KeyError(f"Unknown field '{field}'")
+            have = getattr(book, field)
 
-    else:
-        filter_matches_result = False
-        for result in results:
-            for field, query in filters.items():
-                if query.casefold() in result[field].casefold():
-                    filter_matches_result = True
+            if exact_match:
+                if isinstance(want, str) or isinstance(have, str):
+                    if _norm_str(have) != _norm_str(want):
+                        ok = False
+                        break
                 else:
-                    filter_matches_result = False
+                    if have != want:
+                        ok = False
+                        break
+            else:
+                if _norm_str(want) not in _norm_str(have):
+                    ok = False
                     break
-            if filter_matches_result:
-                filtered_list.append(result)
-    return filtered_list
+
+        if ok:
+            out.append(book)
+
+    return out

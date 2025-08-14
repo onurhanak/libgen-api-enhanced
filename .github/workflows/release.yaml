@@ -1,0 +1,67 @@
+name: Release on main
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build_release_publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          pip install build
+
+      - name: Extract version from setup.py
+        id: version
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          text = pathlib.Path("setup.py").read_text(encoding="utf-8")
+          m = re.search(r'version\s*=\s*"([^"]+)"', text)
+          if not m:
+            sys.exit("version not found in setup.py")
+          print(f"::set-output name=value::{m.group(1)}")
+          PY
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+
+      - name: Create GitHub Release for v${{ steps.version.outputs.value }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to PyPI via OIDC
+        if: ${{ !secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@v1.10.3
+        with:
+          skip-existing: true
+
+      - name: Publish to PyPI with API token
+        if: ${{ secrets.PYPI_API_TOKEN }}
+        uses: pypa/gh-action-pypi-publish@v1.10.3
+        with:
+          password: ${{ secrets.PYPI_API_TOKEN }}
+          skip-existing: true
