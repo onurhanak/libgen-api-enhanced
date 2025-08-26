@@ -117,7 +117,7 @@ req = SearchRequest(
 results = req.aggregate_request_data_libgen()
 ```
 
-### Specifying Search Databases:
+### Specifying Search Topics:
 
 ```python
 from libgen_api_enhanced import LibgenSearch, SearchTopic
