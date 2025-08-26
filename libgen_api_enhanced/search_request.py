@@ -1,17 +1,80 @@
+import logging
+import re
+from enum import Enum
+from urllib.parse import parse_qs, urljoin, urlparse
+
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse, urljoin, parse_qs
-import re
+
 from .book import Book
 
-# WHY
-# The SearchRequest module contains all the internal logic for the library.
-#
-# This encapsulates the logic,
-# ensuring users can work at a higher level of abstraction.
+"""
+SearchRequest module - contains all the internal logic for the library.
 
-# USAGE
-# req = search_request.SearchRequest("[QUERY]", search_type="[title]")
+This encapsulates the search logic, ensuring users can work at a higher level of abstraction.
+
+Usage:
+    req = SearchRequest("query", search_type=SearchType.TITLE)
+    results = req.aggregate_request_data_libgen()
+"""
+
+
+class SearchType(Enum):
+    TITLE = "title"
+    AUTHOR = "author"
+    DEFAULT = "default"
+
+    @property
+    def columns(self):
+        column_map = {
+            SearchType.TITLE: ["t"],  # title
+            SearchType.AUTHOR: ["a"],  # author
+            SearchType.DEFAULT: [
+                "t",
+                "a",
+                "s",
+                "y",
+                "p",
+                "i",
+            ],  # title, author, series, year, publisher, isbn
+        }
+        return column_map[self]
+
+
+class SearchTopic(Enum):
+    LIBGEN = "libgen"
+    COMICS = "comics"
+    FICTION = "fiction"
+    ARTICLES = "articles"
+    MAGAZINES = "magazines"
+    FICTION_RUS = "fictionRUS"
+    STANDARDS = "standards"
+
+    @property
+    def code(self):
+        topic_map = {
+            SearchTopic.LIBGEN: "l",
+            SearchTopic.COMICS: "c",
+            SearchTopic.FICTION: "f",
+            SearchTopic.ARTICLES: "a",
+            SearchTopic.MAGAZINES: "m",
+            SearchTopic.FICTION_RUS: "r",
+            SearchTopic.STANDARDS: "s",
+        }
+        return topic_map[self]
+
+    @classmethod
+    def from_string(cls, value):
+        if not isinstance(value, str):
+            raise TypeError("Value must be a string")
+        for topic in cls:
+            if topic.value == value:
+                return topic
+        raise ValueError(f"Unknown search topic: {value}")
+
+    @classmethod
+    def all_topics(cls):
+        return list(cls)
 
 
 class SearchRequest:
@@ -32,16 +95,60 @@ class SearchRequest:
         "Mirror_4",
     ]
 
-    def __init__(self, query, search_type="title", mirror="https://libgen.li"):
-        self.query = query
-        self.search_type = search_type
-        self.mirror = mirror
+    def __init__(
+        self,
+        query,
+        search_type=SearchType.TITLE,
+        mirror="https://libgen.li",
+        search_in=None,
+    ):
+        if not isinstance(query, str):
+            raise TypeError("Query must be a string")
+        if not isinstance(mirror, str):
+            raise TypeError("Mirror must be a string")
+
+        self.query = query.strip()
+
+        if isinstance(search_type, str):
+            search_type_map = {
+                "title": SearchType.TITLE,
+                "author": SearchType.AUTHOR,
+                "default": SearchType.DEFAULT,
+            }
+            if search_type.lower() not in search_type_map:
+                raise ValueError(
+                    f"Search type must be one of {list(search_type_map.keys())} or a SearchType enum"
+                )
+            self.search_type = search_type_map[search_type.lower()]
+        elif isinstance(search_type, SearchType):
+            self.search_type = search_type
+        else:
+            raise TypeError("Search type must be a string or SearchType enum")
+
+        if search_in is None:
+            self.search_in = SearchTopic.all_topics()
+        elif isinstance(search_in, list):
+            if all(isinstance(item, str) for item in search_in):
+                self.search_in = [SearchTopic.from_string(topic) for topic in search_in]
+            elif all(isinstance(item, SearchTopic) for item in search_in):
+                self.search_in = search_in
+            else:
+                raise TypeError(
+                    "search_in must contain all strings or all SearchTopic enums"
+                )
+        else:
+            raise TypeError("search_in must be a list or None")
+
+        self.mirror = mirror.rstrip("/")
+        self._logger = logging.getLogger(__name__)
 
         if len(self.query) < 3:
-            raise Exception("Query is too short")
+            raise ValueError("Query must be at least 3 characters long")
 
-        if search_type not in ["title", "author", "default"]:
-            raise Exception('Search type must be one of ["title", "author", "default"]')
+        if not (
+            self.mirror.startswith("http://") or self.mirror.startswith("https://")
+        ):
+            raise ValueError("Mirror must be a valid HTTP or HTTPS URL")
 
     def strip_i_tag_from_soup(self, soup):
         subheadings = soup.find_all("i")
@@ -49,30 +156,57 @@ class SearchRequest:
             subheading.decompose()
 
     def get_search_page(self):
-        query_parsed = "%20".join(self.query.split(" "))
-        if self.search_type.lower() == "title":
-            search_url = f"{self.mirror}/index.php?req={query_parsed}&columns%5B%5D=t&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
-        elif self.search_type.lower() == "author":
-            search_url = f"{self.mirror}/index.php?req={query_parsed}&columns%5B%5D=a&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
-        elif self.search_type.lower() == "default":
-            search_url = f"{self.mirror}/index.php?req={query_parsed}&columns%5B%5D=t&columns%5B%5D=a&columns%5B%5D=s&columns%5B%5D=y&columns%5B%5D=p&columns%5B%5D=i&objects%5B%5D=f&objects%5B%5D=e&objects%5B%5D=s&objects%5B%5D=a&objects%5B%5D=p&objects%5B%5D=w&topics%5B%5D=l&res=100&filesuns=all"
+        params = {
+            "req": self.query,
+            "columns[]": self.search_type.columns,
+            "objects[]": [
+                "f",  # file
+                "e",  # editions
+                "s",  # series
+                "a",  # authors
+                "p",  # publishers
+                "w",  # works
+            ],
+            "topics[]": [topic.code for topic in self.search_in],
+            "res": "100",
+            "filesuns": "all",
+        }
+        try:
+            search_page = requests.get(
+                "https://libgen.li/index.php",
+                params=params,
+            )
 
-        if search_url:
-            search_page = requests.get(search_url)
+            search_page.raise_for_status()
             return search_page
-
-        return None
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.RequestException(
+                f"Request to {self.mirror} timed out"
+            )
+        except requests.exceptions.ConnectionError:
+            raise requests.exceptions.RequestException(
+                f"Failed to connect to {self.mirror}"
+            )
+        except requests.exceptions.HTTPError as e:
+            raise requests.exceptions.RequestException(
+                f"HTTP error {e.response.status_code}: {e.response.reason}"
+            )
 
     def aggregate_request_data_libgen(self):
-        search_page = self.get_search_page()
-        soup = BeautifulSoup(search_page.text, "html.parser")
-        self.strip_i_tag_from_soup(soup)
+        try:
+            search_page = self.get_search_page()
+            soup = BeautifulSoup(search_page.text, "html.parser")
+            self.strip_i_tag_from_soup(soup)
 
-        table = soup.find("table", {"id": "tablelibgen"})
-        if table is None:
-            return []
+            table = soup.find("table", {"id": "tablelibgen"})
+            if table is None:
+                self._logger.warning("No results table found on search page")
+                return []
 
-        results = []
+            results = []
+        except Exception as e:
+            self._logger.error(f"Error during search page retrieval: {str(e)}")
+            raise
 
         for row in table.find_all("tr"):
             tds = row.find_all("td")
@@ -140,7 +274,7 @@ class SearchRequest:
                 results.append(book)
 
             except Exception as e:
-                print(e)
+                self._logger.warning(f"Error parsing book row: {str(e)}")
                 continue
 
         return results

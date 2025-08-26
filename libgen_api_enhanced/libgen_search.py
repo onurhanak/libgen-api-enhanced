@@ -1,40 +1,66 @@
-from .search_request import SearchRequest
+from .search_request import SearchRequest, SearchType
 
 
 class LibgenSearch:
     def __init__(self, mirror="li"):
         self.mirror = f"https://libgen.{mirror}/"
 
-    def search_default(self, query):
-        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+    def search_default(self, query, search_in=None):
+        search_request = SearchRequest(
+            query,
+            search_type=SearchType.DEFAULT,
+            mirror=self.mirror,
+            search_in=search_in,
+        )
         return search_request.aggregate_request_data_libgen()
 
-    def search_default_filtered(self, query, filters, exact_match=False):
-        search_request = SearchRequest(query, search_type="default", mirror=self.mirror)
+    def search_default_filtered(
+        self, query, filters, exact_match=False, search_in=None
+    ):
+        search_request = SearchRequest(
+            query,
+            search_type=SearchType.DEFAULT,
+            mirror=self.mirror,
+            search_in=search_in,
+        )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match
         )
         return filtered_results
 
-    def search_title(self, query):
-        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+    def search_title(self, query, search_in=None):
+        search_request = SearchRequest(
+            query, search_type=SearchType.TITLE, mirror=self.mirror, search_in=search_in
+        )
         return search_request.aggregate_request_data_libgen()
 
-    def search_author(self, query):
-        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+    def search_author(self, query, search_in=None):
+        search_request = SearchRequest(
+            query,
+            search_type=SearchType.AUTHOR,
+            mirror=self.mirror,
+            search_in=search_in,
+        )
         return search_request.aggregate_request_data_libgen()
 
-    def search_title_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="title", mirror=self.mirror)
+    def search_title_filtered(self, query, filters, exact_match=True, search_in=None):
+        search_request = SearchRequest(
+            query, search_type=SearchType.TITLE, mirror=self.mirror, search_in=search_in
+        )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match
         )
         return filtered_results
 
-    def search_author_filtered(self, query, filters, exact_match=True):
-        search_request = SearchRequest(query, search_type="author", mirror=self.mirror)
+    def search_author_filtered(self, query, filters, exact_match=True, search_in=None):
+        search_request = SearchRequest(
+            query,
+            search_type=SearchType.AUTHOR,
+            mirror=self.mirror,
+            search_in=search_in,
+        )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(
             results=results, filters=filters, exact_match=exact_match

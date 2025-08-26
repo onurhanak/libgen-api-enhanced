@@ -61,3 +61,13 @@ class Book:
                 return
 
         raise ValueError("Could not extract 'key' parameter from any GET link")
+        
+    def __repr__(self):
+        return (
+            f"Book(id='{self.id}', title='{self.title}', "
+            f"author='{self.author}', year='{self.year}', "
+            f"extension='{self.extension}')"
+        )
+        
+    def __str__(self):
+        return f"{self.title} by {self.author} ({self.year})"

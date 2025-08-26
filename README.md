@@ -5,12 +5,16 @@ Search Library Genesis programmatically using an enhanced Python library. This f
 ## Contents
 
 - [Getting Started](#getting-started)
+- [Search Types and Topics](#search-types-and-topics)
+  - [Search Types](#search-types)
+  - [Search Topics](#search-topics)
 - [Basic Searching](#basic-searching)
 - [Filtered Searching](#filtered-searching)
   - [Filtered Title Searching](#filtered-title-searching)
   - [Filtered Author Searching](#filtered-author-searching)
   - [Non-exact Filtered Searching](#non-exact-filtered-searching)
-  - [Filter Fields](#filter-fields)
+- [Getting Direct Download Links](#getting-direct-download-links)
+- [Results Layout](#results-layout)
 - [Contributors](#contributors)
 
 ## Getting Started
@@ -19,6 +23,39 @@ Install the package:
 
 ```
 pip install libgen-api-enhanced
+```
+
+## Search Types and Topics
+
+The new version provides search configuration options for further narrowing down your queries.
+
+### Search Types
+
+Control which fields are searched:
+
+```python
+from libgen_api_enhanced import SearchType
+
+SearchType.TITLE    # search in titles only
+SearchType.AUTHOR   # search in authors only
+SearchType.DEFAULT  # search across title, author, series, year, publisher, and ISBN
+```
+
+### Search Topics
+
+Specify which Libgen topics to search:
+
+```python
+from libgen_api_enhanced import SearchTopic
+
+# topics:
+SearchTopic.LIBGEN
+SearchTopic.COMICS
+SearchTopic.FICTION
+SearchTopic.ARTICLES
+SearchTopic.MAGAZINES
+SearchTopic.FICTION_RUS
+SearchTopic.STANDARDS
 ```
 
 ## Choosing Libgen Mirror
@@ -65,12 +102,49 @@ s = LibgenSearch()
 results = s.search_author("Jane Austen") # a list of Book objects
 ```
 
-Check out the [results layout](#results-layout) to see available fields and how the results data is formatted.
+### Using SearchRequest Directly with Enums:
+
+```python
+from libgen_api_enhanced import SearchRequest, SearchType, SearchTopic
+
+# search only in fiction and comics
+search_topics = [SearchTopic.FICTION, SearchTopic.COMICS]
+req = SearchRequest(
+    query="Douglas Adams",
+    search_type=SearchType.AUTHOR,
+    search_in=search_topics
+)
+results = req.aggregate_request_data_libgen()
+```
+
+### Specifying Search Databases:
+
+```python
+from libgen_api_enhanced import LibgenSearch, SearchTopic
+
+s = LibgenSearch()
+
+# search only in specific topics
+my_topics = [SearchTopic.LIBGEN, SearchTopic.ARTICLES]
+results = s.search_title("quantum physics", search_in=my_topics)
+
+# search only in fiction
+fiction_results = s.search_author("Isaac Asimov", search_in=[SearchTopic.FICTION])
+```
+
+### Backwards Compatibility:
+
+All existing string-based calls still work:
+
+```python
+results = s.search_title("Pride and Prejudice") # works exactly as before
+results = s.search_author("Jane Austen", search_in=["libgen", "fiction"])
+```
 
 ## Filtered Searching
 
 - You can define a set of filters, and then use them to filter the search results that get returned.
-- By default, filtering will remove results that do not match the filters exactly (case-sensitive) -
+- By default, filtering will remove results that do not match the filters exactly (case-sensitive)
   - This can be adjusted by setting `exact_match=False` when calling one of the filter methods, which allows for case-insensitive and substring filtering.
 
 ### Filtered Title Searching
@@ -78,11 +152,19 @@ Check out the [results layout](#results-layout) to see available fields and how 
 ```python
 # search_title_filtered()
 
-from libgen_api_enhanced import LibgenSearch
+from libgen_api_enhanced import LibgenSearch, SearchTopic
 
 tf = LibgenSearch()
 title_filters = {"year": "2007", "extension": "epub"}
-titles = tf.search_title_filtered("Pride and Prejudice", title_filters, exact_match=True) # a list of Book objects
+
+# search only in fiction database
+fiction_topics = [SearchTopic.FICTION]
+titles = tf.search_title_filtered(
+    "Pride and Prejudice",
+    title_filters,
+    exact_match=True,
+    search_in=fiction_topics
+)
 ```
 
 ### Filtered Author Searching
@@ -90,11 +172,19 @@ titles = tf.search_title_filtered("Pride and Prejudice", title_filters, exact_ma
 ```python
 # search_author_filtered()
 
-from libgen_api_enhanced import LibgenSearch
+from libgen_api_enhanced import LibgenSearch, SearchTopic
 
 af = LibgenSearch()
 author_filters = {"language": "German", "year": "2009"}
-titles = af.search_author_filtered("Agatha Christie", author_filters, exact_match=True) # a list of Book objects
+
+# search in multiple topics
+search_topics = [SearchTopic.LIBGEN, SearchTopic.FICTION]
+titles = af.search_author_filtered(
+    "Agatha Christie",
+    author_filters,
+    exact_match=True,
+    search_in=search_topics
+)
 ```
 
 ### Non-exact Filtered Searching
@@ -102,18 +192,26 @@ titles = af.search_author_filtered("Agatha Christie", author_filters, exact_matc
 ```python
 # search_author_filtered(exact_match = False)
 
-from libgen_api_enhanced import LibgenSearch
+from libgen_api_enhanced import LibgenSearch, SearchTopic
 
 ne_af = LibgenSearch()
 partial_filters = {"year": "200"}
-titles = ne_af.search_author_filtered("Agatha Christie", partial_filters, exact_match=False) # a list of Book objects
 
+string_topics = ["libgen", "fiction"]  # str format
+enum_topics = [SearchTopic.LIBGEN, SearchTopic.FICTION]  # enum format
+
+titles = ne_af.search_author_filtered(
+    "Agatha Christie",
+    partial_filters,
+    exact_match=False,
+    search_in=enum_topics  # or string_topics
+)
 ```
 ## Getting Direct Download Links
 
 The previous books.ms source is no longer available, so this package now provides two options:
 
-- tor_download_link — a prebuilt direct link to the LibGen onion mirror.
+- tor_download_link — a prebuilt direct link to the Libgen onion mirror.
 - resolved_download_link — a direct HTTP link resolved at runtime from one of the available mirrors.
 
 Example:

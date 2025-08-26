@@ -2,7 +2,7 @@ import pytest
 from urllib.parse import urlparse, parse_qs
 
 
-from libgen_api_enhanced.search_request import SearchRequest
+from libgen_api_enhanced.search_request import SearchRequest, SearchType, SearchTopic
 from libgen_api_enhanced.book import Book
 
 
@@ -321,14 +321,125 @@ def test_handles_none_values_safely_in_non_exact():
     assert out == []
 
 
+# -------- tests for new enum functionality --------
+
+
+def test_search_type_enum_values():
+    assert SearchType.TITLE.value == "title"
+    assert SearchType.AUTHOR.value == "author"
+    assert SearchType.DEFAULT.value == "default"
+
+
+def test_search_type_columns():
+    assert SearchType.TITLE.columns == ["t"]
+    assert SearchType.AUTHOR.columns == ["a"]
+    assert SearchType.DEFAULT.columns == ["t", "a", "s", "y", "p", "i"]
+
+
+def test_search_topic_enum_values():
+    assert SearchTopic.LIBGEN.value == "libgen"
+    assert SearchTopic.COMICS.value == "comics"
+    assert SearchTopic.FICTION.value == "fiction"
+    assert SearchTopic.ARTICLES.value == "articles"
+    assert SearchTopic.MAGAZINES.value == "magazines"
+    assert SearchTopic.FICTION_RUS.value == "fictionRUS"
+    assert SearchTopic.STANDARDS.value == "standards"
+
+
+def test_search_topic_codes():
+    assert SearchTopic.LIBGEN.code == "l"
+    assert SearchTopic.COMICS.code == "c"
+    assert SearchTopic.FICTION.code == "f"
+    assert SearchTopic.ARTICLES.code == "a"
+    assert SearchTopic.MAGAZINES.code == "m"
+    assert SearchTopic.FICTION_RUS.code == "r"
+    assert SearchTopic.STANDARDS.code == "s"
+
+
+def test_search_topic_from_string():
+    assert SearchTopic.from_string("libgen") == SearchTopic.LIBGEN
+    assert SearchTopic.from_string("fiction") == SearchTopic.FICTION
+    
+    with pytest.raises(ValueError):
+        SearchTopic.from_string("unknown")
+    
+    with pytest.raises(TypeError):
+        SearchTopic.from_string(123)
+
+
+def test_search_topic_all_topics():
+    topics = SearchTopic.all_topics()
+    assert len(topics) == 7
+    assert SearchTopic.LIBGEN in topics
+    assert SearchTopic.FICTION in topics
+
+
+def test_search_request_with_enum_search_type():
+    sr = SearchRequest("python", search_type=SearchType.AUTHOR)
+    assert sr.search_type == SearchType.AUTHOR
+
+
+def test_search_request_with_string_search_type_backward_compatibility():
+    sr = SearchRequest("python", search_type="title")
+    assert sr.search_type == SearchType.TITLE
+
+
+def test_search_request_with_enum_search_in():
+    topics = [SearchTopic.LIBGEN, SearchTopic.FICTION]
+    sr = SearchRequest("python", search_in=topics)
+    assert sr.search_in == topics
+
+
+def test_search_request_with_string_search_in_backward_compatibility():
+    topic_strings = ["libgen", "fiction"]
+    sr = SearchRequest("python", search_in=topic_strings)
+    assert len(sr.search_in) == 2
+    assert SearchTopic.LIBGEN in sr.search_in
+    assert SearchTopic.FICTION in sr.search_in
+
+
+def test_search_request_default_search_in():
+    sr = SearchRequest("python")
+    assert len(sr.search_in) == 7  # All topics by default
+    assert SearchTopic.LIBGEN in sr.search_in
+
+
+def test_search_request_invalid_search_type():
+    with pytest.raises(ValueError):
+        SearchRequest("python", search_type="invalid")
+    
+    with pytest.raises(TypeError):
+        SearchRequest("python", search_type=123)
+
+
+def test_search_request_invalid_search_in():
+    with pytest.raises(ValueError):
+        SearchRequest("python", search_in=["invalid_topic"])
+    
+    with pytest.raises(TypeError):
+        SearchRequest("python", search_in=["libgen", SearchTopic.FICTION])  # Mixed types
+    
+    with pytest.raises(TypeError):
+        SearchRequest("python", search_in="not_a_list")
+
+
+def test_search_request_type_validation():
+    with pytest.raises(TypeError):
+        SearchRequest(123)  # Query must be string
+    
+    with pytest.raises(TypeError):
+        SearchRequest("python", mirror=123)  # Mirror must be string
+
+
 # -------- integration tests for LibgenSearch filtered methods --------
 
 
 class FakeSearchRequest:
-    def __init__(self, query, search_type="title", mirror="https://example.org"):
+    def __init__(self, query, search_type="title", mirror="https://example.org", search_in=None):
         self.query = query
         self.search_type = search_type
         self.mirror = mirror
+        self.search_in = search_in
 
     def aggregate_request_data_libgen(self):
         return BOOKS
