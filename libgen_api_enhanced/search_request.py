@@ -173,7 +173,7 @@ class SearchRequest:
         }
         try:
             search_page = requests.get(
-                "https://libgen.li/index.php",
+                f"{self.mirror}/index.php",
                 params=params,
             )
 
