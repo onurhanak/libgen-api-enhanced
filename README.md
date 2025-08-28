@@ -1,61 +1,17 @@
-<h1>LibgenAPI Enhanced</h1>
+<div align="center">
+  
+# LibgenAPI Enhanced
 
-Search Library Genesis programmatically using an enhanced Python library. This fork extends the original `libgen-api` by [Harrison Broadbent](https://github.com/harrison-broadbent/libgen-api) with added features like direct download links and book cover links. It also returns 100 results by default, instead of 25.
+A python wrapper for Library Genesis that supports new mirrors, fine-grained searching, and provides direct download links.
 
-## Contents
-
-- [Getting Started](#getting-started)
-- [Search Types and Topics](#search-types-and-topics)
-  - [Search Types](#search-types)
-  - [Search Topics](#search-topics)
-- [Basic Searching](#basic-searching)
-- [Filtered Searching](#filtered-searching)
-  - [Filtered Title Searching](#filtered-title-searching)
-  - [Filtered Author Searching](#filtered-author-searching)
-  - [Non-exact Filtered Searching](#non-exact-filtered-searching)
-- [Getting Direct Download Links](#getting-direct-download-links)
-- [Results Layout](#results-layout)
-- [Contributors](#contributors)
+</div>
 
 ## Getting Started
 
 Install the package:
 
-```
+```bash
 pip install libgen-api-enhanced
-```
-
-## Search Types and Topics
-
-The new version provides search configuration options for further narrowing down your queries.
-
-### Search Types
-
-Control which fields are searched:
-
-```python
-from libgen_api_enhanced import SearchType
-
-SearchType.TITLE    # search in titles only
-SearchType.AUTHOR   # search in authors only
-SearchType.DEFAULT  # search across title, author, series, year, publisher, and ISBN
-```
-
-### Search Topics
-
-Specify which Libgen topics to search:
-
-```python
-from libgen_api_enhanced import SearchTopic
-
-# topics:
-SearchTopic.LIBGEN
-SearchTopic.COMICS
-SearchTopic.FICTION
-SearchTopic.ARTICLES
-SearchTopic.MAGAZINES
-SearchTopic.FICTION_RUS
-SearchTopic.STANDARDS
 ```
 
 ## Choosing Libgen Mirror
@@ -101,6 +57,39 @@ from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
 results = s.search_author("Jane Austen") # a list of Book objects
 ```
+## Search Types and Topics
+
+The new version provides search configuration options for further narrowing down your queries.
+
+### Search Types
+
+Control which fields are searched:
+
+```python
+from libgen_api_enhanced import SearchType
+
+SearchType.TITLE    # search in titles only
+SearchType.AUTHOR   # search in authors only
+SearchType.DEFAULT  # search across title, author, series, year, publisher, and ISBN
+```
+
+### Search Topics
+
+Specify which Libgen topics to search:
+
+```python
+from libgen_api_enhanced import SearchTopic
+
+# topics:
+SearchTopic.LIBGEN
+SearchTopic.COMICS
+SearchTopic.FICTION
+SearchTopic.ARTICLES
+SearchTopic.MAGAZINES
+SearchTopic.FICTION_RUS
+SearchTopic.STANDARDS
+```
+
 
 ### Using SearchRequest Directly with Enums:
 
@@ -130,15 +119,6 @@ results = s.search_title("quantum physics", search_in=my_topics)
 
 # search only in fiction
 fiction_results = s.search_author("Isaac Asimov", search_in=[SearchTopic.FICTION])
-```
-
-### Backwards Compatibility:
-
-All existing string-based calls still work:
-
-```python
-results = s.search_title("Pride and Prejudice") # works exactly as before
-results = s.search_author("Jane Austen", search_in=["libgen", "fiction"])
 ```
 
 ## Filtered Searching
@@ -209,7 +189,7 @@ titles = ne_af.search_author_filtered(
 ```
 ## Getting Direct Download Links
 
-The previous books.ms source is no longer available, so this package now provides two options:
+books.ms domain is no longer available, so this package now provides two options for getting download links:
 
 - tor_download_link — a prebuilt direct link to the Libgen onion mirror.
 - resolved_download_link — a direct HTTP link resolved at runtime from one of the available mirrors.
@@ -261,12 +241,6 @@ Results are returned as a list of Book objects:
 ]
 ```
 
-## Contributors
+## Credits
 
-Please don't hesitate to raise an issue, or fork this project and improve on it.
-
-Thanks to the following people:
-
-- [harrison-broadbent](https://github.com/harrison-broadbent) who wrote the original Libgen API.
-- [calmoo](https://github.com/calmoo)
-- [HENRYMARTIN5](https://github.com/HENRYMARTIN5)
+This library is a fork of [libgen-api](https://github.com/harrison-broadbent/libgen-api) written by [harrison-broadbent](https://github.com/harrison-broadbent).
