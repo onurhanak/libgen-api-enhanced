@@ -38,15 +38,14 @@ class Book:
     def resolve_direct_download_link(self):
         mirror_url = self.mirrors[0]
         md5 = self.md5
-
+        parsed_url = urlparse(mirror_url)
+        root_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
         resp = requests.get(mirror_url)
         resp.raise_for_status()
         soup = BeautifulSoup(resp.text, "html.parser")
-
         a = soup.find_all("a", string=lambda s: s and s.strip().upper() == "GET")
         if not a:
             raise ValueError("No GET links found on the mirror page")
-
         for link in a:
             href = link.get("href")
             if not href:
@@ -56,10 +55,9 @@ class Book:
             key_vals = params.get("key")
             if key_vals and key_vals[0]:
                 key = key_vals[0]
-                cdn_base = getattr(self, "cdn_base", "https://cdn4.booksdl.lc/get.php")
+                cdn_base = f"{root_url}/get.php"
                 self.resolved_download_link = f"{cdn_base}?md5={md5}&key={key}"
                 return
-
         raise ValueError("Could not extract 'key' parameter from any GET link")
         
     def __repr__(self):
