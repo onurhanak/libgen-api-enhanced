@@ -1,6 +1,8 @@
 <div align="center">
   
 # LibgenAPI Enhanced
+![PyPI](https://img.shields.io/pypi/v/libgen-api-enhanced?style=for-the-badge)
+![Downloads](https://img.shields.io/pypi/dm/libgen-api-enhanced?style=for-the-badge&logo=python&logoColor=white&color=blue)
 
 A python wrapper for Library Genesis that supports new mirrors, fine-grained searching, and provides direct download links.
 
