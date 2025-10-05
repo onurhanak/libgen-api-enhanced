@@ -3,6 +3,23 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, parse_qs
 
 
+class BookList:
+    def __init__(self):
+        self.book_list = []
+
+    def __repr__(self):
+        return "\n".join([book.__repr__() for book in self.book_list])
+
+    def __len__(self):
+        return len(self.book_list)
+
+    def append(self, book):
+        self.book_list.append(book)
+
+    def __getitem__(self, index):
+        return self.book_list[index]
+
+
 class Book:
     def __init__(
         self,
@@ -59,13 +76,10 @@ class Book:
                 self.resolved_download_link = f"{cdn_base}?md5={md5}&key={key}"
                 return
         raise ValueError("Could not extract 'key' parameter from any GET link")
-        
+
     def __repr__(self):
         return (
             f"Book(id='{self.id}', title='{self.title}', "
             f"author='{self.author}', year='{self.year}', "
             f"extension='{self.extension}')"
         )
-        
-    def __str__(self):
-        return f"{self.title} by {self.author} ({self.year})"

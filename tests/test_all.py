@@ -66,7 +66,8 @@ def test_no_table_returns_empty(monkeypatch):
 
     sr = SearchRequest("python", search_type="title", mirror="https://example.org")
     books = sr.aggregate_request_data_libgen()
-    assert books == []
+    print(books, type(books))
+    assert books.book_list == []
 
 
 def test_parses_one_row(monkeypatch):
@@ -107,7 +108,7 @@ def test_skips_rows_with_too_few_columns(monkeypatch):
 
     sr = SearchRequest("python")
     books = sr.aggregate_request_data_libgen()
-    assert books == []
+    assert books.book_list == []
 
 
 def test_handles_weird_size_cell(monkeypatch):
@@ -359,10 +360,10 @@ def test_search_topic_codes():
 def test_search_topic_from_string():
     assert SearchTopic.from_string("libgen") == SearchTopic.LIBGEN
     assert SearchTopic.from_string("fiction") == SearchTopic.FICTION
-    
+
     with pytest.raises(ValueError):
         SearchTopic.from_string("unknown")
-    
+
     with pytest.raises(TypeError):
         SearchTopic.from_string(123)
 
@@ -407,7 +408,7 @@ def test_search_request_default_search_in():
 def test_search_request_invalid_search_type():
     with pytest.raises(ValueError):
         SearchRequest("python", search_type="invalid")
-    
+
     with pytest.raises(TypeError):
         SearchRequest("python", search_type=123)
 
@@ -415,10 +416,12 @@ def test_search_request_invalid_search_type():
 def test_search_request_invalid_search_in():
     with pytest.raises(ValueError):
         SearchRequest("python", search_in=["invalid_topic"])
-    
+
     with pytest.raises(TypeError):
-        SearchRequest("python", search_in=["libgen", SearchTopic.FICTION])  # Mixed types
-    
+        SearchRequest(
+            "python", search_in=["libgen", SearchTopic.FICTION]
+        )  # Mixed types
+
     with pytest.raises(TypeError):
         SearchRequest("python", search_in="not_a_list")
 
@@ -426,7 +429,7 @@ def test_search_request_invalid_search_in():
 def test_search_request_type_validation():
     with pytest.raises(TypeError):
         SearchRequest(123)  # Query must be string
-    
+
     with pytest.raises(TypeError):
         SearchRequest("python", mirror=123)  # Mirror must be string
 
@@ -435,7 +438,9 @@ def test_search_request_type_validation():
 
 
 class FakeSearchRequest:
-    def __init__(self, query, search_type="title", mirror="https://example.org", search_in=None):
+    def __init__(
+        self, query, search_type="title", mirror="https://example.org", search_in=None
+    ):
         self.query = query
         self.search_type = search_type
         self.mirror = mirror

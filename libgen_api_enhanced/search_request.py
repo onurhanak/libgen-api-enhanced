@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .book import Book
+from .book import Book, BookList
 
 """
 SearchRequest module - contains all the internal logic for the library.
@@ -192,38 +192,34 @@ class SearchRequest:
                 f"HTTP error {e.response.status_code}: {e.response.reason}"
             )
 
-    def aggregate_request_data_libgen(self):
-        try:
-            search_page = self.get_search_page()
-            soup = BeautifulSoup(search_page.text, "html.parser")
-            self.strip_i_tag_from_soup(soup)
+    def get_mirrors(self, a_elements):
+        mirrors = []
+        for a in a_elements:
+            href = a["href"].strip()
+            parsed = urlparse(href)
+            abs_url = href if parsed.netloc else urljoin(self.mirror, href)
+            mirrors.append(abs_url)
 
-            table = soup.find("table", {"id": "tablelibgen"})
-            if table is None:
-                self._logger.warning("No results table found on search page")
-                return []
+        while len(mirrors) < 4:
+            mirrors.append("")
 
-            results = []
-        except Exception as e:
-            self._logger.error(f"Error during search page retrieval: {str(e)}")
-            raise
+        return mirrors
 
+    def get_books(self, table):
         for row in table.find_all("tr"):
-            tds = row.find_all("td")
-            if len(tds) < 9:
-                continue
-
             try:
+                tds = row.find_all("td")
+                if len(tds) < 9:
+                    continue
+
                 title_links = tds[0].find_all("a")
-                # print(title_links)
-                title = (
-                    title_links[0].text.strip()
-                    if len(title_links) >= 3
-                    else title_links[0].text.strip()
-                )
-                title = re.sub(r"[^A-Za-z0-9 ]+", "", title)
-                first_href = title_links[0]["href"] if title_links else ""
-                id_param = parse_qs(urlparse(first_href).query).get("id", [""])[0]
+                if not title_links:
+                    continue
+
+                title = re.sub(r"[^A-Za-z0-9 ]+", "", title_links[0].text.strip())
+                id_param = parse_qs(urlparse(title_links[0]["href"]).query).get(
+                    "id", [""]
+                )[0]
 
                 author = tds[1].get_text(strip=True)
                 publisher = tds[2].get_text(strip=True)
@@ -241,21 +237,13 @@ class SearchRequest:
                 extension = tds[7].get_text(strip=True)
 
                 mirror_links = tds[8].find_all("a", href=True)
-                mirrors = []
-                for a in mirror_links[:4]:
-                    href = a["href"].strip()
-                    parsed = urlparse(href)
-                    abs_url = href if parsed.netloc else urljoin(self.mirror, href)
-                    mirrors.append(abs_url)
+                mirrors = self.get_mirrors(mirror_links[:4])
 
-                while len(mirrors) < 4:
-                    mirrors.append("")
-
+                md5 = ""
                 if mirrors[0]:
-                    q = parse_qs(urlparse(mirrors[0]).query)
-                    md5 = (q.get("md5") or [""])[0]
+                    md5 = parse_qs(urlparse(mirrors[0]).query).get("md5", [""])[0]
 
-                book = Book(
+                yield Book(
                     id_param,
                     title,
                     author,
@@ -269,12 +257,28 @@ class SearchRequest:
                     mirrors[:4],
                 )
 
-                book.add_tor_download_link()
-
-                results.append(book)
-
             except Exception as e:
                 self._logger.warning(f"Error parsing book row: {str(e)}")
-                continue
 
-        return results
+    def aggregate_request_data_libgen(self):
+        result_list = BookList()
+        try:
+            search_page = self.get_search_page()
+            soup = BeautifulSoup(search_page.text, "html.parser")
+            self.strip_i_tag_from_soup(soup)
+
+            table = soup.find("table", {"id": "tablelibgen"})
+            if table is None:
+                self._logger.warning("No results table found on search page")
+                return result_list
+
+        except Exception as e:
+            self._logger.error(f"Error during search page retrieval: {str(e)}")
+            raise
+
+        books = self.get_books(table)
+        for book in books:
+            book.add_tor_download_link()
+            result_list.append(book)
+
+        return result_list
