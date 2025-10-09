@@ -18,7 +18,7 @@ pip install libgen-api-enhanced
 
 ## Choosing Libgen Mirror
 
-The library by default uses the .li mirror. You can pass any mirror extension you like (as long as the website structure is the same) such as: .bz, .gs etc. when initializng LibgenSearch() like so:
+The library by default uses the .li mirror. You can pass any mirror extension you like (as long as the website structure is the same) such as: .bz, .gs etc. when initializing LibgenSearch() like so:
 
 ```python
 from libgen_api_enhanced import LibgenSearch
