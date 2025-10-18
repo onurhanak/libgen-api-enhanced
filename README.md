@@ -197,7 +197,8 @@ titles = ne_af.search_author_filtered(
 
 from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
-results = s.search_default("Pride and Prejudice", add_upload_info=True) # a list of Book objects with date_added, date_last_modified fields
+# a list of Book objects with date_added, date_last_modified fields
+results = s.search_default("Pride and Prejudice", add_upload_info=True) 
 ```
 
 ## Getting Direct Download Links
@@ -250,6 +251,8 @@ Results are returned as a list of Book objects:
         ],
         tor_download_link="http://example.com/tor",
         resolved_download_link="http://example.com/direct"
+        date_added="2000-01-01 00:00:00'
+        date_last_modified="2000-01-01 00:00:00'
     )
 ]
 ```
