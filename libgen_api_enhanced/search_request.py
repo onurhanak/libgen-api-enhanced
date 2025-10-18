@@ -101,12 +101,14 @@ class SearchRequest:
         search_type=SearchType.TITLE,
         mirror="https://libgen.li",
         search_in=None,
+        add_upload_info=False,
     ):
         if not isinstance(query, str):
             raise TypeError("Query must be a string")
         if not isinstance(mirror, str):
             raise TypeError("Mirror must be a string")
 
+        self.add_upload_info = add_upload_info
         self.query = query.strip()
 
         if isinstance(search_type, str):
@@ -207,78 +209,122 @@ class SearchRequest:
 
     def get_books(self, table):
         for row in table.find_all("tr"):
-            try:
-                tds = row.find_all("td")
-                if len(tds) < 9:
-                    continue
+            # try:
+            tds = row.find_all("td")
+            if len(tds) < 9:
+                continue
 
-                title_links = tds[0].find_all("a")
-                if not title_links:
-                    continue
+            title_links = tds[0].find_all("a")
+            if not title_links:
+                continue
 
-                title = re.sub(r"[^A-Za-z0-9 ]+", "", title_links[0].text.strip())
-                id_param = parse_qs(urlparse(title_links[0]["href"]).query).get(
-                    "id", [""]
-                )[0]
+            title = re.sub(r"[^A-Za-z0-9 ]+", "", title_links[0].text.strip())
+            id_param = parse_qs(urlparse(title_links[0]["href"]).query).get("id", [""])[
+                0
+            ]
 
-                author = tds[1].get_text(strip=True)
-                publisher = tds[2].get_text(strip=True)
-                year = tds[3].get_text(strip=True)
-                language = tds[4].get_text(strip=True)
-                pages = tds[5].get_text(strip=True)
+            author = tds[1].get_text(strip=True)
+            publisher = tds[2].get_text(strip=True)
+            year = tds[3].get_text(strip=True)
+            language = tds[4].get_text(strip=True)
+            pages = tds[5].get_text(strip=True)
 
-                size_link = tds[6].find("a")
-                size = (
-                    size_link.get_text(strip=True)
-                    if size_link
-                    else tds[6].get_text(strip=True)
-                )
+            size_link = tds[6].find("a")
+            size = (
+                size_link.get_text(strip=True)
+                if size_link
+                else tds[6].get_text(strip=True)
+            )
 
-                extension = tds[7].get_text(strip=True)
+            extension = tds[7].get_text(strip=True)
 
-                mirror_links = tds[8].find_all("a", href=True)
-                mirrors = self.get_mirrors(mirror_links[:4])
+            mirror_links = tds[8].find_all("a", href=True)
+            mirrors = self.get_mirrors(mirror_links[:4])
 
-                md5 = ""
-                if mirrors[0]:
-                    md5 = parse_qs(urlparse(mirrors[0]).query).get("md5", [""])[0]
+            md5 = ""
+            if mirrors[0]:
+                md5 = parse_qs(urlparse(mirrors[0]).query).get("md5", [""])[0]
 
-                yield Book(
-                    id_param,
-                    title,
-                    author,
-                    publisher,
-                    year,
-                    language,
-                    pages,
-                    size,
-                    extension,
-                    md5,
-                    mirrors[:4],
-                )
+            date_added = ""
+            date_last_modified = ""
 
-            except Exception as e:
-                self._logger.warning(f"Error parsing book row: {str(e)}")
+            yield Book(
+                id_param,
+                title,
+                author,
+                publisher,
+                year,
+                language,
+                pages,
+                size,
+                extension,
+                md5,
+                mirrors[:4],
+                date_added,
+                date_last_modified,
+            )
 
-    def aggregate_request_data_libgen(self):
-        result_list = BookList()
+        # except Exception as e:
+        #     self._logger.warning(f"Error parsing book row: {str(e)}")
+
+    def add_book_upload_info(self, book_list):
+        ids = ",".join([book.id for book in book_list])
+        url = f"{self.mirror}/json.php?object=e&addkeys=*&ids={ids}"
+
+        try:
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            book_json_data = response.json()
+        except requests.exceptions.Timeout:
+            raise requests.exceptions.RequestException(
+                f"Request to {self.mirror} timed out"
+            )
+        except requests.exceptions.ConnectionError:
+            raise requests.exceptions.RequestException(
+                f"Failed to connect to {self.mirror}"
+            )
+        except requests.exceptions.HTTPError as e:
+            raise requests.exceptions.RequestException(
+                f"HTTP error {e.response.status_code}: {e.response.reason}"
+            )
+        except ValueError:  # JSON decode error
+            raise requests.exceptions.RequestException(
+                f"Invalid JSON response from {self.mirror}"
+            )
+
+        for book in book_list:
+            if book_info := book_json_data.get(book.id):
+                book.date_added = book_info.get("time_added")
+                book.date_last_modified = book_info.get("time_last_modified")
+
+        return book_list
+
+    def get_search_table(self):
         try:
             search_page = self.get_search_page()
             soup = BeautifulSoup(search_page.text, "html.parser")
             self.strip_i_tag_from_soup(soup)
-
             table = soup.find("table", {"id": "tablelibgen"})
             if table is None:
                 self._logger.warning("No results table found on search page")
-                return result_list
-
+            return table
         except Exception as e:
             self._logger.error(f"Error during search page retrieval: {str(e)}")
             raise
+
+    def aggregate_request_data_libgen(self):
+        result_list = BookList()
+
+        table = self.get_search_table()
+        if not table:
+            return result_list
 
         books = self.get_books(table)
         for book in books:
             book.add_tor_download_link()
             result_list.append(book)
+
+        if self.add_upload_info:
+            self.add_book_upload_info(result_list)
 
         return result_list

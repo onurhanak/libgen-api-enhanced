@@ -1,5 +1,5 @@
 <div align="center">
-  
+
 # LibgenAPI Enhanced
 ![PyPI](https://img.shields.io/pypi/v/libgen-api-enhanced?style=for-the-badge)
 ![Downloads](https://img.shields.io/pypi/dm/libgen-api-enhanced?style=for-the-badge&logo=python&logoColor=white&color=blue)
@@ -189,6 +189,17 @@ titles = ne_af.search_author_filtered(
     search_in=enum_topics  # or string_topics
 )
 ```
+
+### Adding Upload Details
+
+```python
+# search_default()
+
+from libgen_api_enhanced import LibgenSearch
+s = LibgenSearch()
+results = s.search_default("Pride and Prejudice", add_upload_info=True) # a list of Book objects with date_added, date_last_modified fields
+```
+
 ## Getting Direct Download Links
 
 books.ms domain is no longer available, so this package now provides two options for getting download links:

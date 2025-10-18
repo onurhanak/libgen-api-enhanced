@@ -34,6 +34,8 @@ class Book:
         extension,
         md5,
         mirrors,
+        date_added,
+        date_last_modified,
     ):
         self.id = id
         self.title = title
@@ -48,6 +50,8 @@ class Book:
         self.mirrors = mirrors
         self.tor_download_link = None
         self.resolved_download_link = None
+        self.date_added = date_added
+        self.date_last_modified = date_last_modified
 
     def add_tor_download_link(self):
         self.tor_download_link = f"http://libgenfrialc7tguyjywa36vtrdcplwpxaw43h6o63dmmwhvavo5rqqd.onion/LG/01311000/{self.md5}/{self.title}.{self.extension}"
@@ -81,5 +85,7 @@ class Book:
         return (
             f"Book(id='{self.id}', title='{self.title}', "
             f"author='{self.author}', year='{self.year}', "
-            f"extension='{self.extension}')"
+            f"extension='{self.extension}', "
+            f"date_added='{self.date_added}', "
+            f"date_last_modified='{self.date_last_modified}')"
         )

@@ -138,6 +138,8 @@ def test_add_tor_download_link_sets_attribute():
         extension="pdf",
         md5="ABCDEF1234",
         mirrors=[],
+        date_added="",
+        date_last_modified="",
     )
     b.add_tor_download_link()
     assert b.tor_download_link is not None
@@ -169,6 +171,8 @@ def test_resolve_direct_download_link_happy_path(monkeypatch):
         extension="pdf",
         md5="ABCDEF1234",
         mirrors=["https://mirror.example/detail?id=1"],
+        date_added="",
+        date_last_modified="",
     )
 
     b.resolve_direct_download_link()
@@ -199,6 +203,8 @@ def test_resolve_direct_download_link_no_get_links(monkeypatch):
         extension="pdf",
         md5="m",
         mirrors=["https://mirror.example/detail?id=1"],
+        date_added="",
+        date_last_modified="",
     )
     with pytest.raises(ValueError):
         b.resolve_direct_download_link()
@@ -217,6 +223,8 @@ def make_book(**kw):
         extension="pdf",
         md5="X",
         mirrors=[],
+        date_added="",
+        date_last_modified="",
     )
     defaults.update(kw)
     return Book(**defaults)
@@ -439,7 +447,12 @@ def test_search_request_type_validation():
 
 class FakeSearchRequest:
     def __init__(
-        self, query, search_type="title", mirror="https://example.org", search_in=None
+        self,
+        query,
+        search_type="title",
+        mirror="https://example.org",
+        search_in=None,
+        add_upload_info=False,
     ):
         self.query = query
         self.search_type = search_type
