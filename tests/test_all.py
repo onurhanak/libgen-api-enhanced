@@ -48,6 +48,43 @@ def minimal_row_html():
     """
 
 
+def row_with_complex_title_format_html():
+    # These are real html from: https://libgen.li/index.php?req=Paper+Princess&columns%5B%5D=t&topics%5B%5D=l&topics%5B%5D=c&topics%5B%5D=f&topics%5B%5D=a&topics%5B%5D=m&topics%5B%5D=r&topics%5B%5D=s&res=100&filesuns=all
+    return """
+    <td><b>Princess 1 <a data-toggle="tooltip" data-placement="right" data-html="true" title=""
+        href="edition.php?id=5730442"
+        data-original-title="Add/Edit : 2021-06-18/2021-06-18; ID: 5993512&lt;br&gt;Carys Jones - [Princess 01] - Paper Princess (retail) (epub)"><i></i></a></b><br><a
+        data-toggle="tooltip" data-placement="right" data-html="true" title="" href="edition.php?id=5730442"
+        data-original-title="Add/Edit : 2021-06-18/2021-06-18; ID: 5993512&lt;br&gt;Carys Jones - [Princess 01] - Paper Princess (retail) (epub)">Paper
+        Princess <i></i></a><br><a data-toggle="tooltip" data-placement="right" data-html="true" title=""
+        href="edition.php?id=5730442"
+        data-original-title="Add/Edit : 2021-06-18/2021-06-18; ID: 5993512&lt;br&gt;Carys Jones - [Princess 01] - Paper Princess (retail) (epub)"><i>
+        <font color="green"> 9781786150646; 1786150646; 9781682994689; 1682994686</font>
+        </i></a>
+    <nobr><span class="badge badge-primary"><a data-toggle="tooltip" data-placement="bottom" data-html="true" title=""
+            data-original-title="book">b</a></span>
+        <span class="badge badge-secondary" "="">f 1969410</span></nobr>
+
+    </td>
+    <td>Jones, Carys </td>
+    <td>Accent Press</td>
+    <td><nobr>2016</nobr></td>
+    <td>English</td>
+    <td>0</td>
+    <td><nobr><a href=" /file.php?id=5993512">631 kB</a>
+    </nobr>
+    </td>
+    <td>epub</td>
+    <td><a data-toggle="tooltip" data-placement="bottom" data-html="true" title=""
+        href="/ads.php?md5=258f68bf7194649fbbaa55cc42e87d02" data-original-title="libgen"><span
+        class="badge badge-primary">1</span></a> <a data-toggle="tooltip" data-placement="bottom" data-html="true"
+        title="" href="https://randombook.org/book/258f68bf7194649fbbaa55cc42e87d02" data-original-title="randombook"><span
+        class="badge badge-primary">2</span></a> <a data-toggle="tooltip" data-placement="bottom" data-html="true"
+        title="" href="https://en.annas-archive.org/md5/258f68bf7194649fbbaa55cc42e87d02?r=Ax2w6jC"
+        data-original-title="anna's archive"><span class="badge badge-primary">3</span></a> </td>
+    """
+
+
 def test_query_too_short_raises():
     with pytest.raises(Exception):
         SearchRequest("ab")
@@ -94,6 +131,33 @@ def test_parses_one_row(monkeypatch):
     assert b.size == "10 MB"
     assert b.extension == "pdf"
     assert b.md5 == "ABCDEF1234"
+    assert b.mirrors[0].startswith("https://example.org/")
+
+
+def test_parses_one_row_with_complex_title_format(monkeypatch):
+    from libgen_api_enhanced.book import Book
+
+    html = make_table_html(row_with_complex_title_format_html())
+
+    def fake_get(url, *args, **kwargs):
+        return FakeResponse(html)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    sr = SearchRequest("python", mirror="https://example.org")
+    books = sr.aggregate_request_data_libgen()
+    assert len(books) == 1
+    b: Book = books[0]
+    assert b.id == "5730442"
+    assert b.title == "Paper Princess"
+    assert b.author == "Jones, Carys"
+    assert b.publisher == "Accent Press"
+    assert b.year == "2016"
+    assert b.language == "English"
+    assert b.pages == "0"
+    assert b.size == "631 kB"
+    assert b.extension == "epub"
+    assert b.md5 == "258f68bf7194649fbbaa55cc42e87d02"
     assert b.mirrors[0].startswith("https://example.org/")
 
 

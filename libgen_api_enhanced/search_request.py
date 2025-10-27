@@ -214,11 +214,13 @@ class SearchRequest:
             if len(tds) < 9:
                 continue
 
-            title_links = tds[0].find_all("a")
+            title_links = tds[0].find_all("a", href=True)
             if not title_links:
                 continue
 
-            title = re.sub(r"[^A-Za-z0-9 ]+", "", title_links[0].text.strip())
+            raw_title = ''.join([link.text for link in title_links])
+            title = re.sub(r'\s+', ' ', raw_title.strip())
+            title = re.sub(r"[^A-Za-z0-9 ]+", "", title.strip())
             id_param = parse_qs(urlparse(title_links[0]["href"]).query).get("id", [""])[
                 0
             ]
