@@ -47,7 +47,6 @@ def minimal_row_html():
       </td>
     """
 
-
 def test_query_too_short_raises():
     with pytest.raises(Exception):
         SearchRequest("ab")
@@ -95,7 +94,6 @@ def test_parses_one_row(monkeypatch):
     assert b.extension == "pdf"
     assert b.md5 == "ABCDEF1234"
     assert b.mirrors[0].startswith("https://example.org/")
-
 
 def test_skips_rows_with_too_few_columns(monkeypatch):
     bad_row = "<td>only one cell</td>"
