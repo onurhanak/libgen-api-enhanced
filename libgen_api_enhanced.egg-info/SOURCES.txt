@@ -1,0 +1,13 @@
+LICENSE
+README.md
+setup.py
+libgen_api_enhanced/__init__.py
+libgen_api_enhanced/book.py
+libgen_api_enhanced/libgen_search.py
+libgen_api_enhanced/search_request.py
+libgen_api_enhanced.egg-info/PKG-INFO
+libgen_api_enhanced.egg-info/SOURCES.txt
+libgen_api_enhanced.egg-info/dependency_links.txt
+libgen_api_enhanced.egg-info/requires.txt
+libgen_api_enhanced.egg-info/top_level.txt
+tests/test_all.py
