@@ -177,6 +177,7 @@ class SearchRequest:
             search_page = requests.get(
                 f"{self.mirror}/index.php",
                 params=params,
+                cookies={"covers": "on"},
             )
 
             search_page.raise_for_status()
@@ -211,10 +212,16 @@ class SearchRequest:
         for row in table.find_all("tr"):
             # try:
             tds = row.find_all("td")
-            if len(tds) < 9:
+            if len(tds) < 10:
                 continue
 
-            title_links = tds[0].find_all("a", href=True)
+            cover_url = None
+            for img in tds[0].find_all("img", src=True):
+                if "covers" in img["src"] or "comicscovers" in img["src"]:
+                    cover_url = urljoin(self.mirror, img["src"]).replace("_small", "")
+                    break
+
+            title_links = tds[1].find_all("a", href=True)
             if not title_links:
                 continue
 
@@ -225,22 +232,22 @@ class SearchRequest:
                 0
             ]
 
-            author = tds[1].get_text(strip=True)
-            publisher = tds[2].get_text(strip=True)
-            year = tds[3].get_text(strip=True)
-            language = tds[4].get_text(strip=True)
-            pages = tds[5].get_text(strip=True)
+            author = tds[2].get_text(strip=True)
+            publisher = tds[3].get_text(strip=True)
+            year = tds[4].get_text(strip=True)
+            language = tds[5].get_text(strip=True)
+            pages = tds[6].get_text(strip=True)
 
-            size_link = tds[6].find("a")
+            size_link = tds[7].find("a")
             size = (
                 size_link.get_text(strip=True)
                 if size_link
-                else tds[6].get_text(strip=True)
+                else tds[7].get_text(strip=True)
             )
 
-            extension = tds[7].get_text(strip=True)
+            extension = tds[8].get_text(strip=True)
 
-            mirror_links = tds[8].find_all("a", href=True)
+            mirror_links = tds[9].find_all("a", href=True)
             mirrors = self.get_mirrors(mirror_links[:4])
 
             md5 = ""
@@ -262,6 +269,7 @@ class SearchRequest:
                 extension,
                 md5,
                 mirrors[:4],
+                cover_url,
                 date_added,
                 date_last_modified,
             )

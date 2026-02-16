@@ -48,6 +48,7 @@ class Book:
         self.extension = extension
         self.md5 = md5
         self.mirrors = mirrors
+        self.cover_url = None
         self.tor_download_link = None
         self.resolved_download_link = None
         self.date_added = date_added
@@ -61,8 +62,12 @@ class Book:
         md5 = self.md5
         parsed_url = urlparse(mirror_url)
         root_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        resp = requests.get(mirror_url)
+        resp = requests.get(mirror_url, stream=True)
         resp.raise_for_status()
+        content_type = resp.headers.get('Content-Type', '').lower()
+        if 'text/html' not in content_type:
+            self.resolved_download_link = mirror_url
+            return
         soup = BeautifulSoup(resp.text, "html.parser")
         a = soup.find_all("a", string=lambda s: s and s.strip().upper() == "GET")
         if not a:
@@ -86,6 +91,7 @@ class Book:
             f"Book(id='{self.id}', title='{self.title}', "
             f"author='{self.author}', year='{self.year}', "
             f"extension='{self.extension}', "
+            f"cover_url='{self.cover_url}', "
             f"date_added='{self.date_added}', "
             f"date_last_modified='{self.date_last_modified}')"
         )
