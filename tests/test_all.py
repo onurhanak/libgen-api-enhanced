@@ -31,6 +31,7 @@ def make_table_html(row_html: str) -> str:
 
 def minimal_row_html():
     return """
+      <td><img src="covers/123.jpg"></td>
       <td>
         <a href="/index.php?id=123&foo=bar">Some Title</a>
       </td>
@@ -123,6 +124,42 @@ def test_handles_weird_size_cell(monkeypatch):
     assert books[0].size == "10 MB"
 
 
+def test_parses_row_without_cover(monkeypatch):
+    from libgen_api_enhanced.book import Book
+
+    # Minimal row without the first <td> (cover)
+    row_without_cover = """
+      <td>
+        <a href="/index.php?id=123&foo=bar">Some Title</a>
+      </td>
+      <td>Jane Doe</td>
+      <td>Acme</td>
+      <td>2020</td>
+      <td>en</td>
+      <td>321</td>
+      <td><a>10 MB</a></td>
+      <td>pdf</td>
+      <td>
+        <a href="/get.php?md5=ABCDEF1234">Mirror A</a>
+      </td>
+    """
+    html = make_table_html(row_without_cover)
+
+    def fake_get(url, *args, **kwargs):
+        return FakeResponse(html)
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    sr = SearchRequest("python")
+    books = sr.aggregate_request_data_libgen()
+    assert len(books) == 1
+    b: Book = books[0]
+    assert b.id == "123"
+    assert b.title == "Some Title"
+    assert b.author == "Jane Doe"
+    assert b.cover_url is None
+
+
 def test_add_tor_download_link_sets_attribute():
     b = Book(
         id="123",
@@ -136,6 +173,7 @@ def test_add_tor_download_link_sets_attribute():
         extension="pdf",
         md5="ABCDEF1234",
         mirrors=[],
+        cover_url=None,
         date_added="",
         date_last_modified="",
     )
@@ -169,6 +207,7 @@ def test_resolve_direct_download_link_happy_path(monkeypatch):
         extension="pdf",
         md5="ABCDEF1234",
         mirrors=["https://mirror.example/detail?id=1"],
+        cover_url=None,
         date_added="",
         date_last_modified="",
     )
@@ -201,6 +240,7 @@ def test_resolve_direct_download_link_no_get_links(monkeypatch):
         extension="pdf",
         md5="m",
         mirrors=["https://mirror.example/detail?id=1"],
+        cover_url=None,
         date_added="",
         date_last_modified="",
     )
@@ -221,6 +261,7 @@ def make_book(**kw):
         extension="pdf",
         md5="X",
         mirrors=[],
+        cover_url=None,
         date_added="",
         date_last_modified="",
     )

@@ -212,16 +212,19 @@ class SearchRequest:
         for row in table.find_all("tr"):
             # try:
             tds = row.find_all("td")
-            if len(tds) < 10:
+            if len(tds) < 9:
                 continue
 
+            has_cover = False
             cover_url = None
-            for img in tds[0].find_all("img", src=True):
-                if "covers" in img["src"] or "comicscovers" in img["src"]:
-                    cover_url = urljoin(self.mirror, img["src"]).replace("_small", "")
-                    break
+            cover_img = tds[0].find("img", src=True)
+            if cover_img and ("covers" in cover_img["src"] or "comicscovers" in cover_img["src"]):
+                has_cover = True
+                cover_url = urljoin(self.mirror, cover_img["src"]).replace("_small", "")
+            
+            offset = 1 if has_cover else 0
 
-            title_links = tds[1].find_all("a", href=True)
+            title_links = tds[offset].find_all("a", href=True)
             if not title_links:
                 continue
 
@@ -232,22 +235,22 @@ class SearchRequest:
                 0
             ]
 
-            author = tds[2].get_text(strip=True)
-            publisher = tds[3].get_text(strip=True)
-            year = tds[4].get_text(strip=True)
-            language = tds[5].get_text(strip=True)
-            pages = tds[6].get_text(strip=True)
+            author = tds[offset + 1].get_text(strip=True)
+            publisher = tds[offset + 2].get_text(strip=True)
+            year = tds[offset + 3].get_text(strip=True)
+            language = tds[offset + 4].get_text(strip=True)
+            pages = tds[offset + 5].get_text(strip=True)
 
-            size_link = tds[7].find("a")
+            size_link = tds[offset + 6].find("a")
             size = (
                 size_link.get_text(strip=True)
                 if size_link
-                else tds[7].get_text(strip=True)
+                else tds[offset + 6].get_text(strip=True)
             )
 
-            extension = tds[8].get_text(strip=True)
+            extension = tds[offset + 7].get_text(strip=True)
 
-            mirror_links = tds[9].find_all("a", href=True)
+            mirror_links = tds[offset + 8].find_all("a", href=True)
             mirrors = self.get_mirrors(mirror_links[:4])
 
             md5 = ""

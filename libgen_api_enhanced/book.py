@@ -34,6 +34,7 @@ class Book:
         extension,
         md5,
         mirrors,
+        cover_url,
         date_added,
         date_last_modified,
     ):
