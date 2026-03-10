@@ -218,7 +218,7 @@ class SearchRequest:
             has_cover = False
             cover_url = None
             cover_img = tds[0].find("img", src=True)
-            if cover_img and ("covers" in cover_img["src"] or "comicscovers" in cover_img["src"]):
+            if cover_img and ("covers" in cover_img["src"]):
                 has_cover = True
                 cover_url = urljoin(self.mirror, cover_img["src"]).replace("_small", "")
             

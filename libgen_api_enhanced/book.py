@@ -49,7 +49,7 @@ class Book:
         self.extension = extension
         self.md5 = md5
         self.mirrors = mirrors
-        self.cover_url = None
+        self.cover_url = cover_url
         self.tor_download_link = None
         self.resolved_download_link = None
         self.date_added = date_added
