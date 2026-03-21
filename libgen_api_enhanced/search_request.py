@@ -177,6 +177,7 @@ class SearchRequest:
             search_page = requests.get(
                 f"{self.mirror}/index.php",
                 params=params,
+                cookies={"covers": "on"},
             )
 
             search_page.raise_for_status()
@@ -214,7 +215,16 @@ class SearchRequest:
             if len(tds) < 9:
                 continue
 
-            title_links = tds[0].find_all("a", href=True)
+            has_cover = False
+            cover_url = None
+            cover_img = tds[0].find("img", src=True)
+            if cover_img and ("covers" in cover_img["src"]):
+                has_cover = True
+                cover_url = urljoin(self.mirror, cover_img["src"]).replace("_small", "")
+            
+            offset = 1 if has_cover else 0
+
+            title_links = tds[offset].find_all("a", href=True)
             if not title_links:
                 continue
 
@@ -225,22 +235,22 @@ class SearchRequest:
                 0
             ]
 
-            author = tds[1].get_text(strip=True)
-            publisher = tds[2].get_text(strip=True)
-            year = tds[3].get_text(strip=True)
-            language = tds[4].get_text(strip=True)
-            pages = tds[5].get_text(strip=True)
+            author = tds[offset + 1].get_text(strip=True)
+            publisher = tds[offset + 2].get_text(strip=True)
+            year = tds[offset + 3].get_text(strip=True)
+            language = tds[offset + 4].get_text(strip=True)
+            pages = tds[offset + 5].get_text(strip=True)
 
-            size_link = tds[6].find("a")
+            size_link = tds[offset + 6].find("a")
             size = (
                 size_link.get_text(strip=True)
                 if size_link
-                else tds[6].get_text(strip=True)
+                else tds[offset + 6].get_text(strip=True)
             )
 
-            extension = tds[7].get_text(strip=True)
+            extension = tds[offset + 7].get_text(strip=True)
 
-            mirror_links = tds[8].find_all("a", href=True)
+            mirror_links = tds[offset + 8].find_all("a", href=True)
             mirrors = self.get_mirrors(mirror_links[:4])
 
             md5 = ""
@@ -262,6 +272,7 @@ class SearchRequest:
                 extension,
                 md5,
                 mirrors[:4],
+                cover_url,
                 date_added,
                 date_last_modified,
             )
