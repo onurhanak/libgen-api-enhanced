@@ -157,6 +157,30 @@ class SearchRequest:
         for subheading in subheadings:
             subheading.decompose()
 
+    def _get_session(self):
+        if getattr(self, "_session", None) is None:
+            self._session = requests.Session()
+            self._session.headers.update(
+                {
+                    "User-Agent": (
+                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+                    ),
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                }
+            )
+            try:
+                self._session.get(f"{self.mirror}/", timeout=30)
+            except Exception:
+                pass
+            try:
+                host = urlparse(self.mirror).netloc
+                self._session.cookies.set("covers", "on", domain=host)
+            except Exception:
+                pass
+        return self._session
+
     def get_search_page(self):
         params = {
             "req": self.query,
@@ -174,10 +198,9 @@ class SearchRequest:
             "filesuns": "all",
         }
         try:
-            search_page = requests.get(
+            search_page = self._get_session().get(
                 f"{self.mirror}/index.php",
                 params=params,
-                cookies={"covers": "on"},
             )
 
             search_page.raise_for_status()
