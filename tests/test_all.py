@@ -492,11 +492,13 @@ class FakeSearchRequest:
         mirror="https://example.org",
         search_in=None,
         add_upload_info=False,
+        timeout=None,
     ):
         self.query = query
         self.search_type = search_type
         self.mirror = mirror
         self.search_in = search_in
+        self.timeout = timeout
 
     def aggregate_request_data_libgen(self):
         return BOOKS
@@ -544,3 +546,55 @@ def test_search_default_filtered_non_exact(monkeypatch):
     )
     assert len(out) == 1
     assert out[0].publisher == "MIT Press"
+
+
+# -------- request timeouts --------
+
+
+def test_search_request_defaults_to_bounded_timeout():
+    from libgen_api_enhanced.search_request import DEFAULT_TIMEOUT
+
+    assert SearchRequest("python").timeout == DEFAULT_TIMEOUT
+    assert DEFAULT_TIMEOUT is not None
+
+
+def test_search_request_timeout_is_overridable():
+    assert SearchRequest("python", timeout=(1, 2)).timeout == (1, 2)
+
+
+def test_libgen_search_passes_its_timeout_to_the_request(monkeypatch):
+    import libgen_api_enhanced.libgen_search as ls
+
+    monkeypatch.setattr(ls, "SearchRequest", FakeSearchRequest)
+    svc = ls.LibgenSearch(timeout=(3, 7))
+    captured = {}
+
+    class _Capture(FakeSearchRequest):
+        def __init__(self, *args, **kwargs):
+            captured.update(kwargs)
+            super().__init__(*args, **kwargs)
+
+    monkeypatch.setattr(ls, "SearchRequest", _Capture)
+    svc.search_title("python")
+
+    assert captured["timeout"] == (3, 7)
+
+
+def test_search_page_request_is_given_a_timeout(monkeypatch):
+    """The bare requests.get here used to wait forever on a dead mirror."""
+    import requests
+
+    seen = {}
+
+    class _Session:
+        def get(self, url, params=None, timeout="MISSING"):
+            seen["timeout"] = timeout
+            raise requests.exceptions.ConnectionError("stop here")
+
+    req = SearchRequest("python", timeout=(4, 9))
+    monkeypatch.setattr(req, "_get_session", lambda: _Session())
+
+    with pytest.raises(requests.exceptions.RequestException):
+        req.get_search_page()
+
+    assert seen["timeout"] == (4, 9)

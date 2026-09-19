@@ -6,7 +6,7 @@ from urllib.parse import parse_qs, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .book import Book, BookList
+from .book import DEFAULT_TIMEOUT, Book, BookList
 
 """
 SearchRequest module - contains all the internal logic for the library.
@@ -102,6 +102,7 @@ class SearchRequest:
         mirror="https://libgen.li",
         search_in=None,
         add_upload_info=False,
+        timeout=DEFAULT_TIMEOUT,
     ):
         if not isinstance(query, str):
             raise TypeError("Query must be a string")
@@ -109,6 +110,7 @@ class SearchRequest:
             raise TypeError("Mirror must be a string")
 
         self.add_upload_info = add_upload_info
+        self.timeout = timeout
         self.query = query.strip()
 
         if isinstance(search_type, str):
@@ -171,7 +173,7 @@ class SearchRequest:
                 }
             )
             try:
-                self._session.get(f"{self.mirror}/", timeout=30)
+                self._session.get(f"{self.mirror}/", timeout=self.timeout)
             except Exception:
                 pass
             try:
@@ -201,6 +203,7 @@ class SearchRequest:
             search_page = self._get_session().get(
                 f"{self.mirror}/index.php",
                 params=params,
+                timeout=self.timeout,
             )
 
             search_page.raise_for_status()

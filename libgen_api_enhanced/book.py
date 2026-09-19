@@ -2,6 +2,12 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, parse_qs
 
+# (connect, read). requests defaults to no timeout at all, which lets a single
+# unresponsive mirror block its caller forever -- and a thread parked inside
+# requests.get cannot be freed by cancelling whatever awaits it, so one hung
+# mirror permanently leaks a worker from the caller's thread pool.
+DEFAULT_TIMEOUT = (5, 15)
+
 
 class BookList:
     def __init__(self):
@@ -63,7 +69,7 @@ class Book:
         md5 = self.md5
         parsed_url = urlparse(mirror_url)
         root_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        resp = requests.get(mirror_url, stream=True)
+        resp = requests.get(mirror_url, stream=True, timeout=DEFAULT_TIMEOUT)
         resp.raise_for_status()
         content_type = resp.headers.get('Content-Type', '').lower()
         if 'text/html' not in content_type:
