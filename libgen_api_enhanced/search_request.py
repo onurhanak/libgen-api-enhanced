@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from .book import Book, BookList
+from .constants import DEFAULT_HEADERS
 
 """
 SearchRequest module - contains all the internal logic for the library.
@@ -178,6 +179,7 @@ class SearchRequest:
                 f"{self.mirror}/index.php",
                 params=params,
                 cookies={"covers": "on"},
+                headers=DEFAULT_HEADERS,
             )
 
             search_page.raise_for_status()
@@ -285,7 +287,7 @@ class SearchRequest:
         url = f"{self.mirror}/json.php?object=e&addkeys=*&ids={ids}"
 
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=30, headers=DEFAULT_HEADERS)
             response.raise_for_status()
             book_json_data = response.json()
         except requests.exceptions.Timeout:

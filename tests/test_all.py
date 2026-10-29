@@ -48,6 +48,7 @@ def minimal_row_html():
       </td>
     """
 
+
 def test_query_too_short_raises():
     with pytest.raises(Exception):
         SearchRequest("ab")
@@ -95,6 +96,7 @@ def test_parses_one_row(monkeypatch):
     assert b.extension == "pdf"
     assert b.md5 == "ABCDEF1234"
     assert b.mirrors[0].startswith("https://example.org/")
+
 
 def test_skips_rows_with_too_few_columns(monkeypatch):
     bad_row = "<td>only one cell</td>"
@@ -544,3 +546,66 @@ def test_search_default_filtered_non_exact(monkeypatch):
     )
     assert len(out) == 1
     assert out[0].publisher == "MIT Press"
+
+
+# -------- tests for the default User-Agent --------
+
+from libgen_api_enhanced.constants import USER_AGENT
+
+
+def test_user_agent_identifies_the_library():
+    assert USER_AGENT.startswith("libgen-api-enhanced")
+
+
+def capture_request_headers(monkeypatch, response_text):
+    seen = []
+
+    def fake_get(url, *args, **kwargs):
+        seen.append(kwargs.get("headers") or {})
+        return FakeResponse(response_text)
+
+    monkeypatch.setattr("requests.get", fake_get)
+    return seen
+
+
+def test_search_page_request_sends_user_agent(monkeypatch):
+    seen = capture_request_headers(monkeypatch, make_table_html(minimal_row_html()))
+
+    SearchRequest("python").aggregate_request_data_libgen()
+    assert len(seen) == 1
+    assert seen[0].get("User-Agent") == USER_AGENT
+
+
+def test_upload_info_request_sends_user_agent(monkeypatch):
+    class FakeJsonResponse(FakeResponse):
+        def json(self):
+            return {"123": {"time_added": "2020-01-01 00:00:00"}}
+
+    seen = []
+
+    def fake_get(url, *args, **kwargs):
+        seen.append(kwargs.get("headers") or {})
+        if "json.php" in url:
+            return FakeJsonResponse("")
+        return FakeResponse(make_table_html(minimal_row_html()))
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    books = SearchRequest(
+        "python", add_upload_info=True
+    ).aggregate_request_data_libgen()
+    assert books[0].date_added == "2020-01-01 00:00:00"
+    assert len(seen) == 2
+    assert all(h.get("User-Agent") == USER_AGENT for h in seen)
+
+
+def test_resolve_direct_download_link_sends_user_agent(monkeypatch):
+    seen = capture_request_headers(
+        monkeypatch, '<html><body><a href="/get?key=XYZ">GET</a></body></html>'
+    )
+
+    make_book(
+        mirrors=["https://mirror.example/detail?id=1"]
+    ).resolve_direct_download_link()
+    assert len(seen) == 1
+    assert seen[0].get("User-Agent") == USER_AGENT

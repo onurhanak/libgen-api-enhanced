@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, parse_qs
 
+from .constants import DEFAULT_HEADERS
+
 
 class BookList:
     def __init__(self):
@@ -63,7 +65,7 @@ class Book:
         md5 = self.md5
         parsed_url = urlparse(mirror_url)
         root_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        resp = requests.get(mirror_url, stream=True)
+        resp = requests.get(mirror_url, stream=True, headers=DEFAULT_HEADERS)
         resp.raise_for_status()
         content_type = resp.headers.get('Content-Type', '').lower()
         if 'text/html' not in content_type:
