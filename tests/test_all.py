@@ -483,6 +483,51 @@ def test_search_request_type_validation():
         SearchRequest("python", mirror=123)  # Mirror must be string
 
 
+# -------- tests for pagination --------
+
+
+def capture_search_params(monkeypatch):
+    seen = {}
+
+    def fake_get(url, *args, **kwargs):
+        seen.update(kwargs.get("params", {}))
+        return FakeResponse(make_table_html(minimal_row_html()))
+
+    monkeypatch.setattr("requests.get", fake_get)
+    return seen
+
+
+def test_search_request_defaults_to_first_page(monkeypatch):
+    seen = capture_search_params(monkeypatch)
+
+    sr = SearchRequest("python")
+    assert sr.page == 1
+    sr.aggregate_request_data_libgen()
+    assert seen["page"] == "1"
+
+
+def test_search_request_sends_requested_page(monkeypatch):
+    seen = capture_search_params(monkeypatch)
+
+    sr = SearchRequest("python", page=3)
+    sr.aggregate_request_data_libgen()
+    assert seen["page"] == "3"
+
+
+def test_search_request_invalid_page():
+    with pytest.raises(ValueError):
+        SearchRequest("python", page=0)
+
+    with pytest.raises(ValueError):
+        SearchRequest("python", page=-1)
+
+    with pytest.raises(TypeError):
+        SearchRequest("python", page="2")
+
+    with pytest.raises(TypeError):
+        SearchRequest("python", page=True)
+
+
 # -------- integration tests for LibgenSearch filtered methods --------
 
 
@@ -495,11 +540,13 @@ class FakeSearchRequest:
         search_in=None,
         add_upload_info=False,
         headers=None,
+        page=1,
     ):
         self.query = query
         self.search_type = search_type
         self.mirror = mirror
         self.search_in = search_in
+        self.page = page
 
     def aggregate_request_data_libgen(self):
         return BOOKS
@@ -683,3 +730,26 @@ def test_resolve_direct_download_link_accepts_headers(monkeypatch):
         mirrors=["https://mirror.example/detail?id=1"]
     ).resolve_direct_download_link(headers={"User-Agent": "my-app/2.0"})
     assert seen == [{"User-Agent": "my-app/2.0"}]
+
+
+def test_search_methods_pass_page_through(monkeypatch):
+    import libgen_api_enhanced.libgen_search as libmod
+
+    seen = []
+
+    class RecordingSearchRequest(FakeSearchRequest):
+        def __init__(self, query, **kwargs):
+            super().__init__(query, **kwargs)
+            seen.append(self.page)
+
+    monkeypatch.setattr(libmod, "SearchRequest", RecordingSearchRequest)
+
+    svc = LibgenSearch()
+    svc.search_default("q", page=2)
+    svc.search_title("q", page=3)
+    svc.search_author("q", page=4)
+    svc.search_default_filtered("q", {}, page=5)
+    svc.search_title_filtered("q", {}, page=6)
+    svc.search_author_filtered("q", {}, page=7)
+    svc.search_title("q")
+    assert seen == [2, 3, 4, 5, 6, 7, 1]

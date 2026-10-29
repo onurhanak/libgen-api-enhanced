@@ -67,6 +67,18 @@ from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch()
 results = s.search_author("Jane Austen") # a list of Book objects
 ```
+
+### Pagination:
+
+Libgen returns 25 results per page. Every search method takes an optional `page` argument (default `1`) to fetch the following pages:
+
+```python
+from libgen_api_enhanced import LibgenSearch
+s = LibgenSearch()
+first_page = s.search_title("Odyssey")           # results 1-25
+second_page = s.search_title("Odyssey", page=2)  # results 26-50
+```
+
 ## Search Types and Topics
 
 The new version provides search configuration options for further narrowing down your queries.
