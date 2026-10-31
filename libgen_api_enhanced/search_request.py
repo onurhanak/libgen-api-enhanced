@@ -104,6 +104,7 @@ class SearchRequest:
         search_in=None,
         add_upload_info=False,
         headers=None,
+        page=1,
     ):
         if not isinstance(query, str):
             raise TypeError("Query must be a string")
@@ -144,6 +145,12 @@ class SearchRequest:
         else:
             raise TypeError("search_in must be a list or None")
 
+        if isinstance(page, bool) or not isinstance(page, int):
+            raise TypeError("page must be an integer")
+        if page < 1:
+            raise ValueError("page must be 1 or greater")
+        self.page = page
+
         self.mirror = mirror.rstrip("/")
         self._logger = logging.getLogger(__name__)
 
@@ -173,8 +180,8 @@ class SearchRequest:
                 "w",  # works
             ],
             "topics[]": [topic.code for topic in self.search_in],
-            "res": "100",
             "filesuns": "all",
+            "page": str(self.page),
         }
         try:
             search_page = requests.get(
@@ -182,6 +189,7 @@ class SearchRequest:
                 params=params,
                 cookies={"covers": "on"},
                 headers=self.headers,
+                timeout=30,
             )
 
             search_page.raise_for_status()
