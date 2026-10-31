@@ -3,12 +3,10 @@ name: Release on main
 on:
   push:
     branches: [ main ]
+    paths:
+      - setup.py
+      - libgen_api_enhanced/_version.py
   workflow_dispatch:
-      inputs:
-        version:
-          description: "Version number to release"
-          required: true
-          default: "1.0.6"
 
 permissions:
   contents: write
@@ -22,23 +20,21 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: "3.14"
 
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip
           pip install build
 
-      - name: Extract version from setup.py
+      - name: Extract version from _version.py
         id: version
         run: |
-          python - <<'PY'
-          import re, pathlib, sys
-          text = pathlib.Path("setup.py").read_text(encoding="utf-8")
-          m = re.search(r'version\s*=\s*"([^"]+)"', text)
-          if not m:
-            sys.exit("version not found in setup.py")
-          print(f"::set-output name=value::{m.group(1)}")
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+          ns = {}
+          exec(pathlib.Path("libgen_api_enhanced/_version.py").read_text(encoding="utf-8"), ns)
+          print(f"value={ns['__version__']}")
           PY
 
       - name: Build sdist and wheel
