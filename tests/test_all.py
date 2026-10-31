@@ -514,6 +514,20 @@ def test_search_request_sends_requested_page(monkeypatch):
     assert seen["page"] == "3"
 
 
+def test_search_request_sends_no_res_and_a_timeout(monkeypatch):
+    seen = []
+
+    def fake_get(url, *args, **kwargs):
+        seen.append(kwargs)
+        return FakeResponse(make_table_html(minimal_row_html()))
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    SearchRequest("python").aggregate_request_data_libgen()
+    assert "res" not in seen[0]["params"]
+    assert seen[0]["timeout"] == 30
+
+
 def test_search_request_invalid_page():
     with pytest.raises(ValueError):
         SearchRequest("python", page=0)

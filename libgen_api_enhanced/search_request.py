@@ -180,7 +180,6 @@ class SearchRequest:
                 "w",  # works
             ],
             "topics[]": [topic.code for topic in self.search_in],
-            "res": "100",
             "filesuns": "all",
             "page": str(self.page),
         }
@@ -190,6 +189,7 @@ class SearchRequest:
                 params=params,
                 cookies={"covers": "on"},
                 headers=self.headers,
+                timeout=30,
             )
 
             search_page.raise_for_status()
