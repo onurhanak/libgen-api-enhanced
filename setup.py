@@ -1,12 +1,15 @@
 import setuptools
 from pathlib import Path
 
+version = {}
+exec(Path("libgen_api_enhanced/_version.py").read_text(encoding="utf-8"), version)
+
 long_description = Path("README.md").read_text(encoding="utf-8")
 
 setuptools.setup(
     name="libgen_api_enhanced",
     packages=["libgen_api_enhanced"],
-    version="1.3",
+    version=version["__version__"],
     description="Search Library genesis by Title or Author",
     long_description_content_type="text/markdown",
     long_description=long_description,

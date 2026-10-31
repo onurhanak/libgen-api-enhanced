@@ -48,6 +48,7 @@ def minimal_row_html():
       </td>
     """
 
+
 def test_query_too_short_raises():
     with pytest.raises(Exception):
         SearchRequest("ab")
@@ -95,6 +96,7 @@ def test_parses_one_row(monkeypatch):
     assert b.extension == "pdf"
     assert b.md5 == "ABCDEF1234"
     assert b.mirrors[0].startswith("https://example.org/")
+
 
 def test_skips_rows_with_too_few_columns(monkeypatch):
     bad_row = "<td>only one cell</td>"
@@ -492,6 +494,7 @@ class FakeSearchRequest:
         mirror="https://example.org",
         search_in=None,
         add_upload_info=False,
+        headers=None,
     ):
         self.query = query
         self.search_type = search_type
@@ -544,3 +547,139 @@ def test_search_default_filtered_non_exact(monkeypatch):
     )
     assert len(out) == 1
     assert out[0].publisher == "MIT Press"
+
+
+# -------- tests for the default User-Agent --------
+
+from libgen_api_enhanced.constants import USER_AGENT
+
+
+def test_user_agent_identifies_the_library():
+    assert USER_AGENT.startswith("libgen-api-enhanced")
+
+
+def capture_request_headers(monkeypatch, response_text):
+    seen = []
+
+    def fake_get(url, *args, **kwargs):
+        seen.append(kwargs.get("headers") or {})
+        return FakeResponse(response_text)
+
+    monkeypatch.setattr("requests.get", fake_get)
+    return seen
+
+
+def test_search_page_request_sends_user_agent(monkeypatch):
+    seen = capture_request_headers(monkeypatch, make_table_html(minimal_row_html()))
+
+    SearchRequest("python").aggregate_request_data_libgen()
+    assert len(seen) == 1
+    assert seen[0].get("User-Agent") == USER_AGENT
+
+
+def test_upload_info_request_sends_user_agent(monkeypatch):
+    class FakeJsonResponse(FakeResponse):
+        def json(self):
+            return {"123": {"time_added": "2020-01-01 00:00:00"}}
+
+    seen = []
+
+    def fake_get(url, *args, **kwargs):
+        seen.append(kwargs.get("headers") or {})
+        if "json.php" in url:
+            return FakeJsonResponse("")
+        return FakeResponse(make_table_html(minimal_row_html()))
+
+    monkeypatch.setattr("requests.get", fake_get)
+
+    books = SearchRequest(
+        "python", add_upload_info=True
+    ).aggregate_request_data_libgen()
+    assert books[0].date_added == "2020-01-01 00:00:00"
+    assert len(seen) == 2
+    assert all(h.get("User-Agent") == USER_AGENT for h in seen)
+
+
+def test_resolve_direct_download_link_sends_user_agent(monkeypatch):
+    seen = capture_request_headers(
+        monkeypatch, '<html><body><a href="/get?key=XYZ">GET</a></body></html>'
+    )
+
+    make_book(
+        mirrors=["https://mirror.example/detail?id=1"]
+    ).resolve_direct_download_link()
+    assert len(seen) == 1
+    assert seen[0].get("User-Agent") == USER_AGENT
+
+
+def test_user_agent_carries_the_library_version():
+    from libgen_api_enhanced import __version__
+
+    assert USER_AGENT.startswith(f"libgen-api-enhanced/{__version__} ")
+
+
+def test_default_headers_are_read_only():
+    from libgen_api_enhanced.constants import DEFAULT_HEADERS
+
+    with pytest.raises(TypeError):
+        DEFAULT_HEADERS["User-Agent"] = "changed"
+    with pytest.raises(TypeError):
+        del DEFAULT_HEADERS["User-Agent"]
+    assert dict(DEFAULT_HEADERS) == {"User-Agent": USER_AGENT}
+
+
+def test_caller_headers_override_and_extend_the_defaults(monkeypatch):
+    from libgen_api_enhanced.constants import DEFAULT_HEADERS
+
+    seen = capture_request_headers(monkeypatch, make_table_html(minimal_row_html()))
+
+    SearchRequest(
+        "python", headers={"User-Agent": "my-app/2.0", "Accept-Language": "en"}
+    ).aggregate_request_data_libgen()
+    assert seen == [{"User-Agent": "my-app/2.0", "Accept-Language": "en"}]
+
+    SearchRequest("python").aggregate_request_data_libgen()
+    assert seen[1] == {"User-Agent": USER_AGENT}
+    assert dict(DEFAULT_HEADERS) == {"User-Agent": USER_AGENT}
+
+
+def test_each_request_gets_its_own_headers(monkeypatch):
+    seen = capture_request_headers(monkeypatch, make_table_html(minimal_row_html()))
+
+    SearchRequest("python").aggregate_request_data_libgen()
+    seen[0]["User-Agent"] = "changed by a hook"
+    SearchRequest("python").aggregate_request_data_libgen()
+    assert seen[1] == {"User-Agent": USER_AGENT}
+
+
+def test_libgen_search_passes_its_headers_to_every_search(monkeypatch):
+    import libgen_api_enhanced.libgen_search as libmod
+
+    passed = []
+
+    class RecordingSearchRequest(FakeSearchRequest):
+        def __init__(self, query, headers=None, **kwargs):
+            super().__init__(query, **kwargs)
+            passed.append(headers)
+
+    monkeypatch.setattr(libmod, "SearchRequest", RecordingSearchRequest)
+
+    svc = LibgenSearch(headers={"User-Agent": "my-app/2.0"})
+    svc.search_default("q")
+    svc.search_title("q")
+    svc.search_author("q")
+    svc.search_default_filtered("q", filters={})
+    svc.search_title_filtered("q", filters={})
+    svc.search_author_filtered("q", filters={})
+    assert passed == [{"User-Agent": "my-app/2.0"}] * 6
+
+
+def test_resolve_direct_download_link_accepts_headers(monkeypatch):
+    seen = capture_request_headers(
+        monkeypatch, '<html><body><a href="/get?key=XYZ">GET</a></body></html>'
+    )
+
+    make_book(
+        mirrors=["https://mirror.example/detail?id=1"]
+    ).resolve_direct_download_link(headers={"User-Agent": "my-app/2.0"})
+    assert seen == [{"User-Agent": "my-app/2.0"}]

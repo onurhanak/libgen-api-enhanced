@@ -7,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from .book import Book, BookList
+from .constants import request_headers
 
 """
 SearchRequest module - contains all the internal logic for the library.
@@ -102,6 +103,7 @@ class SearchRequest:
         mirror="https://libgen.li",
         search_in=None,
         add_upload_info=False,
+        headers=None,
     ):
         if not isinstance(query, str):
             raise TypeError("Query must be a string")
@@ -109,6 +111,7 @@ class SearchRequest:
             raise TypeError("Mirror must be a string")
 
         self.add_upload_info = add_upload_info
+        self.headers = request_headers(headers)
         self.query = query.strip()
 
         if isinstance(search_type, str):
@@ -178,6 +181,7 @@ class SearchRequest:
                 f"{self.mirror}/index.php",
                 params=params,
                 cookies={"covers": "on"},
+                headers=self.headers,
             )
 
             search_page.raise_for_status()
@@ -285,7 +289,7 @@ class SearchRequest:
         url = f"{self.mirror}/json.php?object=e&addkeys=*&ids={ids}"
 
         try:
-            response = requests.get(url, timeout=30)
+            response = requests.get(url, timeout=30, headers=self.headers)
             response.raise_for_status()
             book_json_data = response.json()
         except requests.exceptions.Timeout:
