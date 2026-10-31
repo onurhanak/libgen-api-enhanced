@@ -2,8 +2,9 @@ from .search_request import SearchRequest, SearchType
 
 
 class LibgenSearch:
-    def __init__(self, mirror="li"):
+    def __init__(self, mirror="li", headers=None):
         self.mirror = f"https://libgen.{mirror}/"
+        self.headers = headers
 
     def search_default(self, query, search_in=None, add_upload_info=False):
         search_request = SearchRequest(
@@ -12,6 +13,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         return search_request.aggregate_request_data_libgen()
 
@@ -24,6 +26,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(
@@ -38,6 +41,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         return search_request.aggregate_request_data_libgen()
 
@@ -48,6 +52,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         return search_request.aggregate_request_data_libgen()
 
@@ -60,6 +65,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(
@@ -78,6 +84,7 @@ class LibgenSearch:
             mirror=self.mirror,
             search_in=search_in,
             add_upload_info=add_upload_info,
+            headers=self.headers,
         )
         results = search_request.aggregate_request_data_libgen()
         filtered_results = filter_books(

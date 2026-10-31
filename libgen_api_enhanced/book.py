@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse, urljoin, parse_qs
 
-from .constants import DEFAULT_HEADERS
+from .constants import request_headers
 
 
 class BookList:
@@ -60,12 +60,12 @@ class Book:
     def add_tor_download_link(self):
         self.tor_download_link = f"http://libgenfrialc7tguyjywa36vtrdcplwpxaw43h6o63dmmwhvavo5rqqd.onion/LG/01311000/{self.md5}/{self.title}.{self.extension}"
 
-    def resolve_direct_download_link(self):
+    def resolve_direct_download_link(self, headers=None):
         mirror_url = self.mirrors[0]
         md5 = self.md5
         parsed_url = urlparse(mirror_url)
         root_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
-        resp = requests.get(mirror_url, stream=True, headers=DEFAULT_HEADERS)
+        resp = requests.get(mirror_url, stream=True, headers=request_headers(headers))
         resp.raise_for_status()
         content_type = resp.headers.get('Content-Type', '').lower()
         if 'text/html' not in content_type:

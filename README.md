@@ -25,6 +25,15 @@ from libgen_api_enhanced import LibgenSearch
 s = LibgenSearch(mirror="bz")
 ```
 
+## Request Headers
+
+Every request sends `User-Agent: libgen-api-enhanced/<version> (+https://github.com/onurhanak/libgen-api-enhanced)`. Pass `headers` to set your own user agent or add headers; they are merged over the defaults:
+
+```python
+s = LibgenSearch(headers={"User-Agent": "my-app/2.0"})
+book.resolve_direct_download_link(headers={"User-Agent": "my-app/2.0"})
+```
+
 ## Basic Searching:
 
 Use the default search or search by title or author:
